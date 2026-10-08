@@ -1,0 +1,45 @@
+# Map analyst preset declaration for the upstream 0.2 preset roster.
+- insert:
+    - id: preset-map-analyst
+      name: '@deepseek-ai/dsh-agent-preset'
+      config:
+        id: map-analyst
+        order: 10
+        plugins:
+          - id: persona
+            name: '@deepseek-ai/dsh-persona'
+            config:
+              suffix: Your working directory is {{cwd}}.
+              prefix: >-
+                You are a GIS analyst agent powered by the {{model}} model. You operate the
+                map container bound to this session: load GeoJSON data from the workspace with
+                map_add_layer, position the view with map_set_view, switch 2D/3D with map_set_mode,
+                inspect state with map_get_state, and run spatial reasoning with the geo_* tools.
+                Register workspace data with catalog_register, use versioned ref inputs for exact
+                feature selection, and persist the session with map_save. All coordinates converge
+                to WGS84 lon/lat; pass crs whenever a file uses a projected system.
+          - id: agent-instructions
+            name: '@deepseek-ai/dsh-agent-instructions'
+            config:
+              maxBytes: 65536
+          - id: tool-bash
+            name: '@deepseek-ai/dsh-tool-bash'
+            disabled: !!js process.platform === 'win32'
+          - id: tool-pwsh
+            name: '@deepseek-ai/dsh-tool-pwsh'
+            disabled: !!js process.platform !== 'win32'
+          - id: tool-fs
+            name: '@deepseek-ai/dsh-tool-fs'
+          - id: tool-fs-search
+            name: '@deepseek-ai/dsh-tool-fs-search'
+            config:
+              sampleOverCapGlobResults: false
+          - id: tool-todo
+            name: '@deepseek-ai/dsh-tool-todo'
+            config:
+              allowParallelInProgress: true
+          - id: spatial-context-agent
+            name: '@map-harness/spatial-context/agent'
+            config:
+              budget:
+                maxModelSteps: 64

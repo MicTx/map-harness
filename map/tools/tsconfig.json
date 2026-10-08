@@ -1,0 +1,50 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": "src",
+    "outDir": "lib/types",
+    "incremental": false,
+    "composite": false
+  },
+  "include": [
+    "src"
+  ],
+  "references": [
+    {
+      "path": "../../vendor/cordis"
+    },
+    {
+      "path": "../../packages/core/tools"
+    },
+    {
+      "path": "../../packages/mcp/mcp-client"
+    },
+    {
+      "path": "../../packages/fs/fs"
+    },
+    {
+      "path": "../../packages/core/session"
+    },
+    {
+      "path": "../../packages/session/session-projection"
+    },
+    {
+      "path": "../../map/map-container"
+    },
+    {
+      "path": "../spatial-collab"
+    },
+    {
+      "path": "../spatial-catalog"
+    },
+    {
+      "path": "../spatial-context"
+    },
+    {
+      "path": "../spatial-accessibility"
+    },
+    {
+      "path": "../spatial-statistics"
+    }
+  ]
+}

@@ -1,0 +1,23 @@
+{
+  "extends": "../../tsconfig.base.client.json",
+  "compilerOptions": {
+    "rootDir": "src",
+    "outDir": "lib/types"
+  },
+  "include": [
+    "src"
+  ],
+  "references": [
+    { "path": "../spatial-catalog" },
+    { "path": "../../packages/session/session-projection" },
+    { "path": "../../packages/core/session" },
+    { "path": "../../vendor/cordis" },
+    { "path": "../../packages/client/ui-renderer" },
+    { "path": "../../packages/client/store" },
+    { "path": "../../packages/client/ui-slots" },
+    { "path": "../../packages/client/ui-sidebar-right" },
+    { "path": "../../packages/client/ui-session" },
+    { "path": "../../packages/client/ui-conversation/tsconfig.client.json" },
+    { "path": "../../packages/client/locale/tsconfig.client.json" }
+  ]
+}

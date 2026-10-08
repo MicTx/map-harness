@@ -1,0 +1,25 @@
+{
+  "name": "@map-harness/spatial-storage",
+  "description": "Map-owned durable store: versioned SQLite schema migrations with dry-run/backup/checksum/crash journaling, backup bundles with layered never-overwriting restore, the reference graph with pins and leases, and dry-run-planned staging/orphan cleanup",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "lib/types/index.js",
+  "types": "lib/types/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./lib/types/index.d.ts",
+      "default": "./lib/types/index.js"
+    },
+    "./src/*": "./src/*",
+    "./package.json": "./package.json"
+  },
+  "scripts": {
+    "build": "tsc -b tsconfig.json",
+    "test": "node --test --experimental-strip-types tests/*.spec.mjs"
+  },
+  "files": [
+    "lib/types/**/*.d.ts"
+  ],
+  "license": "AGPL-3.0-only"
+}

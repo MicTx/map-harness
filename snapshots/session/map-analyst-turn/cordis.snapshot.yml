@@ -1,0 +1,87 @@
+# Replay patch for the map-analyst snapshot composition. The model script
+# comes from the scenario's committed session JSONL; the map capability
+# surface, the native tool presentation, and the persona stay identical to
+# the live-recording patch so the replayed request headers match.
+
+- id: llm-deepseek
+  name: '@deepseek-ai/dsh-llm-deepseek'
+  disabled: true
+
+- id: plugin-package-inventory-deepseek
+  disabled: true
+
+- id: session-title-llm
+  disabled: true
+
+- id: session-persistence-jsonl
+  name: '@deepseek-ai/dsh-session-persistence-jsonl'
+  config:
+    root: !!js dshHomePath('sessions')
+    compression: none
+
+- id: sandbox
+  name: '@deepseek-ai/dsh-sandbox-local'
+  config:
+    runnerCommand:
+      - bash
+      - -c
+      - while [ "$1" != "--" ]; do shift; done; shift; exec "$@"
+      - passthrough-runner
+    runnerFailureSignatures:
+      - 'passthrough-runner: profile rejected'
+
+- id: tools
+  config:
+    mode: native
+
+- id: system-prompt
+  name: '@deepseek-ai/dsh-system-prompt'
+  config:
+    personaPrefix: >-
+      You are a GIS analyst agent powered by the {{model}} model. You operate the
+      map container bound to this session: load GeoJSON data from the workspace with
+      map_add_layer, position the view with map_set_view, switch 2D/3D with map_set_mode,
+      inspect state with map_get_state, and run spatial reasoning with the geo_* tools
+      (buffer, area, intersect, distance). For reproducible analyses register workspace
+      data with catalog_register, select exact features with the versioned `ref` inputs
+      (buffer publishes a map-loadable artifact), and persist the session with map_save.
+      All coordinates converge to WGS84 lon/lat; pass `crs` whenever a file uses a
+      projected system such as CGCS2000 zones.
+
+- insert:
+    - id: map-container
+      name: '../../../map/map-container/lib/index.js'
+    - id: arcgis-mcp
+      name: '../../../map/arcgis-mcp/lib/index.js'
+    - id: spatial-catalog
+      name: '../../../map/spatial-catalog/lib/index.js'
+      config:
+        root: !!js dshHomePath('spatial-store')
+    - id: spatial-context
+      name: '../../../map/spatial-context/lib/index.js'
+    - id: spatial-context-agent
+      name: '../../../map/spatial-context/lib/agent.js'
+    - id: spatial-accessibility
+      name: '../../../map/spatial-accessibility/lib/index.js'
+      config:
+        root: !!js dshHomePath('accessibility-store')
+    - id: spatial-collab
+      name: '../../../map/spatial-collab/lib/index.js'
+    - id: tool-map-tools
+      name: '../../../map/tools/lib/index.js'
+
+- insert:
+    - id: llm-replay
+      name: '@deepseek-ai/dsh-llm-replay'
+      config:
+        providers:
+          - id: deepseek-official
+            name: DeepSeek
+            models:
+              # The catalog facts the live recording produced, so the replayed
+              # request header reconstructs the recorded adapterDefaults.
+              - id: glm-5.3
+                contextWindow: 131072
+                defaultMaxTokens: 131072
+                reasoningEfforts: [off, low, high, max]
+                defaultReasoningEffort: high

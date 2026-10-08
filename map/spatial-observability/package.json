@@ -1,0 +1,27 @@
+{
+  "name": "@map-harness/spatial-observability",
+  "description": "Spatial observability and operations library: the versioned `spatial-observability@1` contract — versioned correlation fields (operationRef/runId/goalRevision/traceId) with an ambient propagation scope, the closed outcome vocabulary (succeeded/partial/failed/cancelled/outcome_unknown/degraded) and versioned error codes, low-cardinality metric labels with the closed plane/segment/provider vocabularies, visible sanitization of credentials/user data/geometry/paths, structured logs whose failures and audit facts are never sampled away, per-plane health (process/provider/catalog/run/data/render) with readiness aggregation and transition history, the deterministic fault-injection matrix (flush/artifact-publish/provider/worker/render) with replay recovery, and the bounded sanitized diagnostic export. Telemetry failures are counted (telemetry degraded) and never block the spatial result. A pure library — no host row.",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "lib/index.js",
+  "types": "lib/types/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./lib/types/index.d.ts",
+      "default": "./lib/index.js"
+    },
+    "./src/*": "./src/*",
+    "./package.json": "./package.json"
+  },
+  "scripts": {
+    "build": "tsc -b tsconfig.json && tsdown",
+    "test": "node --test --experimental-strip-types tests/*.spec.mjs",
+    "watch": "tsdown --watch"
+  },
+  "files": [
+    "lib/index.js",
+    "lib/types/**/*.d.ts"
+  ],
+  "license": "AGPL-3.0-only"
+}

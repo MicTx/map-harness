@@ -1,0 +1,2945 @@
+{
+ "initial": [
+  {
+   "name": "attribution_association",
+   "description": "Measure the association of one outcome field with candidate factor fields over one registered resource version: per-factor Pearson and Spearman correlations with seeded permutation p-values. The claim level is always `association` — these are correlations, never causal effects — and constant outcomes or thin tables are honest not_applicable results. Publishes the full factor table as an artifact.",
+   "parameters": {
+    "type": "object",
+    "properties": {
+     "goal_revision": {
+      "type": "number",
+      "description": "Goal revision this analysis belongs to."
+     },
+     "resource_ref": {
+      "type": "string",
+      "description": "Exact resource ref (res-…@vN) of the Point analysis rows."
+     },
+     "outcome_field": {
+      "type": "string",
+      "description": "Numeric outcome property."
+     },
+     "factor_fields": {
+      "type": "array",
+      "description": "1–8 candidate factor property names.",
+      "items": {
+       "type": "string"
+      }
+     }
+    },
+    "required": [
+     "goal_revision",
+     "resource_ref",
+     "outcome_field",
+     "factor_fields"
+    ]
+   }
+  },
+  {
+   "name": "attribution_effect",
+   "description": "Estimate one treatment's effect on an outcome under an explicit identification design (covariate-adjustment or two-period difference-in-differences) with balance, overlap, and interference diagnostics and a t interval. The claim level reaches `causal` only when a design is declared and every diagnostic passes; otherwise the same numbers are reported at the `association` level with named downgrade reasons. Unmeasured confounding is never excluded by these diagnostics alone. Publishes the diagnostics table as an artifact.",
+   "parameters": {
+    "type": "object",
+    "properties": {
+     "goal_revision": {
+      "type": "number",
+      "description": "Goal revision this analysis belongs to."
+     },
+     "resource_ref": {
+      "type": "string",
+      "description": "Exact resource ref (res-…@vN) of the analysis rows (panel rows for difference-in-differences)."
+     },
+     "outcome_field": {
+      "type": "string",
+      "description": "Numeric outcome property."
+     },
+     "factor_fields": {
+      "type": "array",
+      "description": "1–8 control/covariate property names.",
+      "items": {
+       "type": "string"
+      }
+     },
+     "treatment_field": {
+      "type": "string",
+      "description": "Binary treatment property."
+     },
+     "treated_value": {
+      "oneOf": [
+       {
+        "type": "boolean"
+       },
+       {
+        "type": "number"
+       },
+       {
+        "type": "string"
+       }
+      ],
+      "description": "Row value marking the treated group."
+     },
+     "design": {
+      "type": "string",
+      "description": "covariate-adjustment or difference-in-differences. Absent: the estimate reports at the association level with a named downgrade reason."
+     },
+     "period_field": {
+      "type": "string",
+      "description": "Pre/post property (difference-in-differences)."
+     },
+     "pre_value": {
+      "oneOf": [
+       {
+        "type": "boolean"
+       },
+       {
+        "type": "number"
+       },
+       {
+        "type": "string"
+       }
+      ],
+      "description": "Row value marking the pre period."
+     },
+     "post_value": {
+      "oneOf": [
+       {
+        "type": "boolean"
+       },
+       {
+        "type": "number"
+       },
+       {
+        "type": "string"
+       }
+      ],
+      "description": "Row value marking the post period."
+     },
+     "unit_field": {
+      "type": "string",
+      "description": "Property grouping panel rows into one unit (difference-in-differences)."
+     },
+     "interference_band_meters": {
+      "type": "number",
+      "description": "Interference band: controls with treated neighbors inside it trigger the spillover downgrade. Declaring it is required for the causal level."
+     },
+     "interval_level": {
+      "type": "number",
+      "description": "Interval level 0.8, 0.9 (default), or 0.95; recorded in the spec."
+     }
+    },
+    "required": [
+     "goal_revision",
+     "resource_ref",
+     "outcome_field",
+     "factor_fields",
+     "treatment_field",
+     "treated_value"
+    ]
+   }
+  },
+  {
+   "name": "attribution_explain",
+   "description": "Explain one outcome field with a linear model over candidate factor fields: standardized contribution shares, R², and variance-inflation collinearity flags. The shares explain the fitted model under its declared factors — the claim level stays `model-explanation`, and omitted factors or collinearity can change them. Same-source artifacts and exploratory factor choices are never independent confirmatory evidence. Publishes the full table as an artifact.",
+   "parameters": {
+    "type": "object",
+    "properties": {
+     "goal_revision": {
+      "type": "number",
+      "description": "Goal revision this analysis belongs to."
+     },
+     "resource_ref": {
+      "type": "string",
+      "description": "Exact resource ref (res-…@vN) of the Point analysis rows."
+     },
+     "outcome_field": {
+      "type": "string",
+      "description": "Numeric outcome property."
+     },
+     "factor_fields": {
+      "type": "array",
+      "description": "1–8 candidate factor property names.",
+      "items": {
+       "type": "string"
+      }
+     }
+    },
+    "required": [
+     "goal_revision",
+     "resource_ref",
+     "outcome_field",
+     "factor_fields"
+    ]
+   }
+  },
+  {
+   "name": "bash",
+   "description": "Execute a bash command (`bash -c`) and return its stdout/stderr. Each call runs in a fresh shell: no state (cwd, variables, functions) persists between calls — pass `workdir` instead of using `cd`. Non-zero exits are reported as `[exit code: N]`. Current harness environment facts are exposed through managed `$DSH_*` variables; inspect them when needed. Commands may run under a file sandbox; a blocked file operation is reported as `[sandbox: file access denied under <mode> mode]` — a policy denial, not a bug in the command; do not retry another way. Long output is truncated to its tail; the full output is saved to a file whose path is reported when available. Set `run_in_background: true` for long-running commands: the call returns a job id immediately; read its output with `job_output` and stop it with `job_kill`. Attempting a command the sandbox may deny is safe and expected: run it and read the marker rather than assuming the denial. When a command is denied and a wider mode would let it succeed, escalate immediately in the same turn — the one sanctioned exception to a denial: retry the exact same command once with `sandbox_permissions` (the narrowest wider mode that suffices) plus a one-sentence `justification`. Do not detour through chat to ask permission first — the approval prompt raised by that retry is how the user consents. If the session states approval prompts are disabled, there is no exception: a denial is final — do not set `sandbox_permissions`. Never escalate speculatively: ground the request in a real denial — normally the one this command just hit; escalating up front is fine only when this session already denied the same access. A rejected escalation is final for that command — stop and explain, never work around it — but it does not forbid attempting or escalating other commands later.",
+   "parameters": {
+    "type": "object",
+    "properties": {
+     "command": {
+      "type": "string",
+      "description": "The bash command to execute."
+     },
+     "description": {
+      "type": "string",
+      "description": "Clear, concise description of what this command does in active voice, 5-10 words (shown in the UI). Examples: \"ls\" → \"List files in current directory\"; \"git status\" → \"Show working tree status\"; \"npm install\" → \"Install package dependencies\"."
+     },
+     "timeoutMs": {
+      "type": "number",
+      "description": "Timeout in milliseconds. The executor applies its configured default and cap, and kills the command on expiry."
+     },
+     "workdir": {
+      "type": "string",
+      "description": "Working directory for this command. Defaults to the session workspace; a relative path is resolved against it."
+     },
+     "run_in_background": {
+      "type": "boolean",
+      "description": "Run in the background and return a job id immediately (collect with job_output, stop with job_kill). No timeout applies."
+     },
+     "sandbox_permissions": {
+      "type": "string",
+      "description": "The wider sandbox mode this command needs. Only valid as a one-shot retry of a command the sandbox just denied; requires justification and user approval.",
+      "enum": [
+       "workspace-write",
+       "danger-full-access"
+      ]
+     },
+     "justification": {
+      "type": "string",
+      "description": "Required with sandbox_permissions: one sentence for the user explaining why this exact command needs the wider access."
+     }
+    },
+    "required": [
+     "command",
+     "description"
+    ]
+   }
+  },
+  {
+   "name": "catalog_register",
+   "description": "Register a workspace GeoJSON file as an immutable, versioned resource in the map catalog. The exact bytes are copied into the controlled store and digested; later analysis reads the copy, so later changes to the source file never alter a registered version. Pass `crs` for projected sources. Returns the exact resource ref (res-…@vN) that the geo_* tools' `ref` input and map_add_layer consume.",
+   "parameters": {
+    "type": "object",
+    "properties": {
+     "path": {
+      "type": "string",
+      "description": "GeoJSON file path (workspace-relative or absolute)."
+     },
+     "crs": {
+      "type": "string",
+      "description": "Source CRS of the file; defaults to WGS84."
+     },
+     "name": {
+      "type": "string",
+      "description": "Stable resource name; re-registering one name publishes the next version of that resource."
+     },
+     "authorization": {
+      "type": "string",
+      "description": "Authorization domain to publish under; defaults to the local domain."
+     },
+     "retry_of": {
+      "type": "number",
+      "description": "Seq of this session's original catalog_register `tool/call` to retry: returns the already-published version and never re-reads the path."
+     }
+    },
+    "required": [
+     "path"
+    ]
+   }
+  },
+  {
+   "name": "catalog_resolve",
+   "description": "Resolve one exact registered resource version (ref `res-…@vN` from catalog_register), or search governed semantic definitions with a business-language query. Resource resolution returns stable feature refs and a RetrievalBundle; semantic search returns bounded, exact-version definition candidates.",
+   "parameters": {
+    "type": "object",
+    "properties": {
+     "resource": {
+      "type": "string",
+      "description": "Exact resource ref, `res-…@vN`; mutually exclusive with `query`."
+     },
+     "query": {
+      "type": "string",
+      "description": "Business-language query for semantic canonical names and aliases; mutually exclusive with `resource`."
+     },
+     "applicability": {
+      "type": "string",
+      "description": "Optional applicability filter for semantic search."
+     },
+     "limit": {
+      "type": "number",
+      "description": "Semantic candidate limit, from 1 to 32.",
+      "minimum": 1,
+      "maximum": 32
+     }
+    }
+   }
+  },
+  {
+   "name": "create_goal",
+   "description": "Create one persisted same-session completion goal when the current direct human request is a long-running objective that should continue across autonomous goal rounds. You may infer that intent without requiring the user to say \"create a goal\". Do not use this for trivial single-turn work. Execution rejects non-human and subagent authority.",
+   "parameters": {
+    "type": "object",
+    "properties": {
+     "objective": {
+      "type": "string",
+      "description": "The concrete completion objective inferred from the direct human request."
+     },
+     "max_goal_rounds": {
+      "type": "number",
+      "description": "Optional positive safe-integer limit on automatic continuation rounds."
+     }
+    },
+    "required": [
+     "objective"
+    ]
+   }
+  },
+  {
+   "name": "decision_update",
+   "description": "Submit one plan update for the current analysis goal: your tentative interpretation (stays tentative), candidate methods, steps, and data gaps. Cite the goal revision and plan revision you are editing against (`map_get_state`-equivalent context arrives in the injected spatial snapshot). The update writes only the plan state — it can never change the user's goal, acceptance criteria, or recorded evidence. Conflicts (stale goal/plan revision) are refused; re-read the current snapshot before retrying.",
+   "parameters": {
+    "type": "object",
+    "properties": {
+     "goal_revision": {
+      "type": "number",
+      "description": "Current goal revision the plan is written against (from the injected snapshot header/目标 line)."
+     },
+     "expected_plan_revision": {
+      "type": "number",
+      "description": "Plan revision you are editing against (0 when no plan exists yet)."
+     },
+     "interpretation": {
+      "type": "string",
+      "description": "Tentative interpretation of the goal; never promoted to user authority."
+     },
+     "methods": {
+      "description": "Array of { name, rationale? } candidates (≤ 32)."
+     },
+     "steps": {
+      "description": "Array of planned step strings (≤ 32)."
+     },
+     "gaps": {
+      "description": "Array of { id, description, status: open|blocked|resolved } (≤ 32); repeated re-open of one id beyond the remediation limit is refused."
+     },
+     "evidence_refs": {
+      "description": "Array of evidence seqs this plan cites; every ref must already be settled in the ledger."
+     }
+    },
+    "required": [
+     "goal_revision",
+     "expected_plan_revision"
+    ]
+   }
+  },
+  {
+   "name": "edit",
+   "description": "Edit an existing UTF-8 text file by replacing literal text.",
+   "parameters": {
+    "type": "object",
+    "properties": {
+     "file_path": {
+      "type": "string",
+      "description": "Path to edit, resolved by the filesystem backend."
+     },
+     "old_string": {
+      "type": "string",
+      "description": "Literal text to replace. Must match exactly."
+     },
+     "new_string": {
+      "type": "string",
+      "description": "Literal replacement text. Use an empty string to delete the match."
+     },
+     "replace_all": {
+      "type": "boolean",
+      "description": "Replace all matches. Defaults to false; when false, old_string must appear exactly once."
+     },
+     "sandbox_permissions": {
+      "type": "string",
+      "description": "The wider sandbox mode this file operation needs. Only valid as a one-shot retry of an operation the sandbox just denied; requires justification and user approval.",
+      "enum": [
+       "workspace-write",
+       "danger-full-access"
+      ]
+     },
+     "justification": {
+      "type": "string",
+      "description": "Required with sandbox_permissions: one sentence for the user explaining why this exact file operation needs the wider access."
+     }
+    },
+    "required": [
+     "file_path",
+     "old_string",
+     "new_string"
+    ]
+   }
+  },
+  {
+   "name": "exit_plan_mode",
+   "description": "Use only in plan mode. Present your plan for the user's review and, on approval, leave plan mode. Send the COMPLETE plan as markdown, starting with a # heading that names it. The user may approve (carry out the plan from your next step) or keep planning — their feedback comes back in the tool result; revise and present again.",
+   "parameters": {
+    "type": "object",
+    "properties": {
+     "plan": {
+      "type": "string",
+      "description": "The complete plan, as markdown, starting with a # heading that names it."
+     }
+    },
+    "required": [
+     "plan"
+    ]
+   }
+  },
+  {
+   "name": "forecast_fit",
+   "description": "Fit the selected linear, threshold, or quadratic-ridge model through the declared training cutoff and publish it as a versioned model artifact (the ref forecast_predict consumes). In-sample R² is reported but is not predictive skill — run forecast_validate against the baseline first. Models using concurrent features record them, and forecast_predict will refuse such models.",
+   "parameters": {
+    "type": "object",
+    "properties": {
+     "goal_revision": {
+      "type": "number",
+      "description": "Goal revision this analysis belongs to."
+     },
+     "resource_ref": {
+      "type": "string",
+      "description": "Exact resource ref (res-…@vN) of the historical Point rows."
+     },
+     "outcome_field": {
+      "type": "string",
+      "description": "Numeric outcome property."
+     },
+     "time_field": {
+      "type": "string",
+      "description": "Property holding each row's ISO event time."
+     },
+     "features": {
+      "type": "array",
+      "description": "Up to 8 { field, availability } entries.",
+      "items": {
+       "type": "object",
+       "additionalProperties": false,
+       "properties": {
+        "field": {
+         "type": "string"
+        },
+        "availability": {
+         "type": "string",
+         "enum": [
+          "known-at-origin",
+          "concurrent"
+         ]
+        }
+       },
+       "required": [
+        "field",
+        "availability"
+       ]
+      }
+     },
+     "training_from": {
+      "type": "string",
+      "description": "Training window start (ISO)."
+     },
+     "training_to": {
+      "type": "string",
+      "description": "Training cutoff (ISO, exclusive)."
+     },
+     "block_meters": {
+      "type": "number",
+      "description": "Spatial block size in meters (kept identical to forecast_validate)."
+     },
+     "granularity": {
+      "type": "string",
+      "description": "day (default), week, or month."
+     },
+     "baseline": {
+      "type": "string",
+      "description": "naive (default) or mean — the baseline the model reports against."
+     },
+     "model_family": {
+      "type": "string",
+      "description": "linear (default), threshold (single feature split), or quadratic-ridge (explicit squares with fixed ridge penalty).",
+      "enum": [
+       "linear",
+       "threshold",
+       "quadratic-ridge"
+      ]
+     },
+     "interval_level": {
+      "type": "number",
+      "description": "Interval level 0.8, 0.9 (default), or 0.95."
+     }
+    },
+    "required": [
+     "goal_revision",
+     "resource_ref",
+     "outcome_field",
+     "time_field",
+     "training_from",
+     "training_to",
+     "block_meters"
+    ]
+   }
+  },
+  {
+   "name": "forecast_predict",
+   "description": "Predict `horizon_steps` bins past a fitted model's training cutoff for the prediction-origin rows. Reads the published model artifact (method-version drift is refused), enforces feature availability (concurrent features are refused — future values are unknowable), compares against the baseline, and flags out-of-domain feature values and drifted feature means instead of extrapolating silently. Publishes the prediction table as an artifact.",
+   "parameters": {
+    "type": "object",
+    "properties": {
+     "goal_revision": {
+      "type": "number",
+      "description": "Goal revision this analysis belongs to."
+     },
+     "model_ref": {
+      "type": "string",
+      "description": "Exact artifact ref (art-…@vN) from forecast_fit."
+     },
+     "resource_ref": {
+      "type": "string",
+      "description": "Exact resource ref (res-…@vN) of the prediction-origin Point rows (feature values only)."
+     },
+     "horizon_steps": {
+      "type": "number",
+      "description": "Forward steps in bins (1–64, default 1)."
+     },
+     "interval_level": {
+      "type": "number",
+      "description": "Interval level 0.8, 0.9 (default), or 0.95."
+     }
+    },
+    "required": [
+     "goal_revision",
+     "model_ref",
+     "resource_ref"
+    ]
+   }
+  },
+  {
+   "name": "forecast_validate",
+   "description": "Validate a forecast honestly: fit through the training cutoff, evaluate on the last `holdout_steps` time bins (time-forward by construction), and compare against the declared simple baseline. Concurrent features are refused — their holdout values would not have existed at the cutoff, which is leakage. Reports MAE/RMSE for the model and the baseline, skill, empirical interval coverage, and per-spatial-block validation rows. Publishes the per-row table as an artifact.",
+   "parameters": {
+    "type": "object",
+    "properties": {
+     "goal_revision": {
+      "type": "number",
+      "description": "Goal revision this analysis belongs to."
+     },
+     "resource_ref": {
+      "type": "string",
+      "description": "Exact resource ref (res-…@vN) of the historical Point rows."
+     },
+     "outcome_field": {
+      "type": "string",
+      "description": "Numeric outcome property."
+     },
+     "time_field": {
+      "type": "string",
+      "description": "Property holding each row's ISO event time."
+     },
+     "features": {
+      "type": "array",
+      "description": "Up to 8 { field, availability } entries; availability is known-at-origin or concurrent (concurrent is refused here).",
+      "items": {
+       "type": "object",
+       "additionalProperties": false,
+       "properties": {
+        "field": {
+         "type": "string"
+        },
+        "availability": {
+         "type": "string",
+         "enum": [
+          "known-at-origin",
+          "concurrent"
+         ]
+        }
+       },
+       "required": [
+        "field",
+        "availability"
+       ]
+      }
+     },
+     "training_from": {
+      "type": "string",
+      "description": "Training window start (ISO)."
+     },
+     "training_to": {
+      "type": "string",
+      "description": "Training cutoff (ISO, exclusive): rows at or after it never enter the fit."
+     },
+     "block_meters": {
+      "type": "number",
+      "description": "Spatial block size in meters for the per-block validation rows."
+     },
+     "granularity": {
+      "type": "string",
+      "description": "day (default), week, or month — the UTC bin."
+     },
+     "baseline": {
+      "type": "string",
+      "description": "naive (default, last training bin) or mean — the comparison baseline."
+     },
+     "model_family": {
+      "type": "string",
+      "description": "linear (default), threshold (single feature split), or quadratic-ridge (explicit squares with fixed ridge penalty).",
+      "enum": [
+       "linear",
+       "threshold",
+       "quadratic-ridge"
+      ]
+     },
+     "holdout_steps": {
+      "type": "number",
+      "description": "Last k bins held out (1–64, default 4)."
+     },
+     "interval_level": {
+      "type": "number",
+      "description": "Interval level 0.8, 0.9 (default), or 0.95."
+     }
+    },
+    "required": [
+     "goal_revision",
+     "resource_ref",
+     "outcome_field",
+     "time_field",
+     "training_from",
+     "training_to",
+     "block_meters"
+    ]
+   }
+  },
+  {
+   "name": "geo_area",
+   "description": "Measure the geodesic area (square meters) and bounding box of a polygonal GeoJSON feature. Give EITHER `path` (workspace file; `feature_index` selects, default 0) OR `ref` (exact resource + feature refs). Pass `crs` for projected path sources.",
+   "parameters": {
+    "type": "object",
+    "properties": {
+     "path": {
+      "type": "string",
+      "description": "GeoJSON file path (legacy branch; mutually exclusive with `ref`)."
+     },
+     "feature_index": {
+      "type": "number",
+      "description": "Zero-based feature index for `path` inputs; defaults to 0. Ignored with `ref`."
+     },
+     "crs": {
+      "type": "string",
+      "description": "Source CRS for `path` inputs; defaults to WGS84."
+     },
+     "ref": {
+      "type": "object",
+      "description": "Versioned single-feature input: exact resource ref plus the stable feature ref to select (never defaults to the first feature).",
+      "additionalProperties": false,
+      "properties": {
+       "resource": {
+        "type": "string",
+        "description": "Exact resource ref, `res-…@vN`."
+       },
+       "feature": {
+        "type": "string",
+        "description": "Stable feature ref, `f-…`, from catalog_resolve."
+       }
+      },
+      "required": [
+       "resource",
+       "feature"
+      ]
+     }
+    }
+   }
+  },
+  {
+   "name": "geo_buffer",
+   "description": "Compute a fixed-distance buffer around a GeoJSON feature. Give EITHER `path` (workspace file, legacy first-geometry-feature semantics) OR `ref` (exact resource + feature refs; publishes an immutable, map-loadable artifact). Buffers in geodesic-equivalent meters and reports area, bounding box, and — on the ref branch — a `artifact.ref` you can pass to map_add_layer.",
+   "parameters": {
+    "type": "object",
+    "properties": {
+     "path": {
+      "type": "string",
+      "description": "GeoJSON file path (legacy branch; mutually exclusive with `ref`)."
+     },
+     "crs": {
+      "type": "string",
+      "description": "Source CRS for `path` inputs; defaults to WGS84."
+     },
+     "ref": {
+      "type": "object",
+      "description": "Versioned single-feature input: exact resource ref plus the stable feature ref to select (never defaults to the first feature).",
+      "additionalProperties": false,
+      "properties": {
+       "resource": {
+        "type": "string",
+        "description": "Exact resource ref, `res-…@vN`."
+       },
+       "feature": {
+        "type": "string",
+        "description": "Stable feature ref, `f-…`, from catalog_resolve."
+       }
+      },
+      "required": [
+       "resource",
+       "feature"
+      ]
+     },
+     "distance_m": {
+      "type": "number",
+      "description": "Buffer distance in meters (positive grows, negative shrinks). Required unless `retry_of` is given."
+     },
+     "steps": {
+      "type": "number",
+      "description": "Number of circle approximation steps per quarter (higher is smoother; 1–32)."
+     },
+     "retry_of": {
+      "type": "number",
+      "description": "Seq of this session's original geo_buffer `tool/call` to retry: returns the already-published artifact and never recomputes."
+     }
+    }
+   }
+  },
+  {
+   "name": "geo_distance",
+   "description": "Measure the geodesic distance between two point GeoJSON features. Each end independently takes a workspace `path` (with its own `crs_a`/`crs_b`) or a versioned `ref_a`/`ref_b` selector — never both on one end. Reports kilometers and meters.",
+   "parameters": {
+    "type": "object",
+    "properties": {
+     "path_a": {
+      "type": "string",
+      "description": "First GeoJSON file path holding a Point feature (legacy branch)."
+     },
+     "path_b": {
+      "type": "string",
+      "description": "Second GeoJSON file path holding a Point feature (legacy branch)."
+     },
+     "ref_a": {
+      "type": "object",
+      "description": "Versioned single-feature input: exact resource ref plus the stable feature ref to select (never defaults to the first feature).",
+      "additionalProperties": false,
+      "properties": {
+       "resource": {
+        "type": "string",
+        "description": "Exact resource ref, `res-…@vN`."
+       },
+       "feature": {
+        "type": "string",
+        "description": "Stable feature ref, `f-…`, from catalog_resolve."
+       }
+      },
+      "required": [
+       "resource",
+       "feature"
+      ]
+     },
+     "ref_b": {
+      "type": "object",
+      "description": "Versioned single-feature input: exact resource ref plus the stable feature ref to select (never defaults to the first feature).",
+      "additionalProperties": false,
+      "properties": {
+       "resource": {
+        "type": "string",
+        "description": "Exact resource ref, `res-…@vN`."
+       },
+       "feature": {
+        "type": "string",
+        "description": "Stable feature ref, `f-…`, from catalog_resolve."
+       }
+      },
+      "required": [
+       "resource",
+       "feature"
+      ]
+     },
+     "crs_a": {
+      "type": "string",
+      "description": "Source CRS of file A; defaults to WGS84."
+     },
+     "crs_b": {
+      "type": "string",
+      "description": "Source CRS of file B; defaults to WGS84."
+     }
+    }
+   }
+  },
+  {
+   "name": "geo_intersect",
+   "description": "Compute the geometric intersection of two polygonal GeoJSON features. Each end independently takes a workspace `path` (with its own `crs_a`/`crs_b`) or a versioned `ref_a`/`ref_b` selector — never both on one end, and a ref never falls back to the first feature. Reports overlap presence, area, and bbox.",
+   "parameters": {
+    "type": "object",
+    "properties": {
+     "path_a": {
+      "type": "string",
+      "description": "First GeoJSON file path (legacy branch)."
+     },
+     "path_b": {
+      "type": "string",
+      "description": "Second GeoJSON file path (legacy branch)."
+     },
+     "ref_a": {
+      "type": "object",
+      "description": "Versioned single-feature input: exact resource ref plus the stable feature ref to select (never defaults to the first feature).",
+      "additionalProperties": false,
+      "properties": {
+       "resource": {
+        "type": "string",
+        "description": "Exact resource ref, `res-…@vN`."
+       },
+       "feature": {
+        "type": "string",
+        "description": "Stable feature ref, `f-…`, from catalog_resolve."
+       }
+      },
+      "required": [
+       "resource",
+       "feature"
+      ]
+     },
+     "ref_b": {
+      "type": "object",
+      "description": "Versioned single-feature input: exact resource ref plus the stable feature ref to select (never defaults to the first feature).",
+      "additionalProperties": false,
+      "properties": {
+       "resource": {
+        "type": "string",
+        "description": "Exact resource ref, `res-…@vN`."
+       },
+       "feature": {
+        "type": "string",
+        "description": "Stable feature ref, `f-…`, from catalog_resolve."
+       }
+      },
+      "required": [
+       "resource",
+       "feature"
+      ]
+     },
+     "crs_a": {
+      "type": "string",
+      "description": "Source CRS of file A; defaults to WGS84."
+     },
+     "crs_b": {
+      "type": "string",
+      "description": "Source CRS of file B; defaults to WGS84."
+     }
+    }
+   }
+  },
+  {
+   "name": "geo_line_of_sight",
+   "description": "Compute line of sight (visibility) between two points over a registered terrain grid (res-…@vN). Requires the surface's vertical metadata (datum/units/epoch — no default) and its accuracy budget (surface_sigma_m). Samples the sightline at the given interval with optional earth-curvature/refraction correction and optional building/voxel obstacles, and reports visible/blocked/indeterminate with the first obstruction, slant and horizontal distances, and the clearance uncertainty. A grazing sightline inside the error budget reports indeterminate, never visible. Pass layer_id to refuse when the displayed terrain version is not this one.",
+   "parameters": {
+    "type": "object",
+    "properties": {
+     "surface_ref": {
+      "type": "string",
+      "description": "Exact surface resource ref, `res-…@vN` (registered point grid)."
+     },
+     "vertical_datum": {
+      "type": "string",
+      "description": "Named vertical datum of the surface elevations."
+     },
+     "vertical_units": {
+      "type": "string",
+      "description": "Vertical unit; \"m\" is the supported unit."
+     },
+     "vertical_epoch": {
+      "type": "string",
+      "description": "Datum epoch or the literal \"none\"."
+     },
+     "elevation_field": {
+      "type": "string",
+      "description": "Elevation property; \"elevation\" is the recorded default."
+     },
+     "observer": {
+      "type": "array",
+      "description": "WGS84 [lon, lat] of the observer.",
+      "items": {
+       "type": "number"
+      }
+     },
+     "observer_height_m": {
+      "type": "number",
+      "description": "Observer height above the terrain; 0 is the recorded default."
+     },
+     "observer_elevation_m": {
+      "type": "number",
+      "description": "Absolute observer elevation override; skips sampling the surface for the endpoint."
+     },
+     "target": {
+      "type": "array",
+      "description": "WGS84 [lon, lat] of the target.",
+      "items": {
+       "type": "number"
+      }
+     },
+     "target_height_m": {
+      "type": "number",
+      "description": "Target height above the terrain; 0 is the recorded default."
+     },
+     "target_elevation_m": {
+      "type": "number",
+      "description": "Absolute target elevation override."
+     },
+     "sampling_interval_m": {
+      "type": "number",
+      "description": "Sample spacing in meters; 25 is the recorded default."
+     },
+     "max_samples": {
+      "type": "number",
+      "description": "Sample-count bound; 4096 is the recorded default. Exceeding it refuses instead of coarsening."
+     },
+     "surface_sigma_m": {
+      "type": "number",
+      "description": "Surface elevation one-sigma in meters; the clearance uncertainty and honest indeterminate band derive from it."
+     },
+     "endpoint_sigma_m": {
+      "type": "number",
+      "description": "Endpoint elevation one-sigma in meters for both endpoints; 0 is the recorded default."
+     },
+     "curvature": {
+      "type": "string",
+      "description": "\"corrected\" (recorded default; drop (1−k)·d²/2R) or \"none\"."
+     },
+     "refraction_k": {
+      "type": "number",
+      "description": "Refraction coefficient with curvature=corrected; 0.13 is the recorded default."
+     },
+     "buildings_ref": {
+      "type": "string",
+      "description": "Optional building-footprint resource ref (Polygons with a height property)."
+     },
+     "height_field": {
+      "type": "string",
+      "description": "Building height property with buildings_ref; \"height\" is the recorded default."
+     },
+     "building_base": {
+      "type": "string",
+      "description": "\"terrain\" (recorded default) or \"absolute\" (needs base_field)."
+     },
+     "base_field": {
+      "type": "string",
+      "description": "Absolute base-elevation property with building_base=\"absolute\"."
+     },
+     "voxels_ref": {
+      "type": "string",
+      "description": "Optional occupied-voxel resource ref (Points at cell centers with a z property)."
+     },
+     "z_field": {
+      "type": "string",
+      "description": "Voxel center-elevation property with voxels_ref; \"z\" is the recorded default."
+     },
+     "voxel_cell_m": {
+      "type": "number",
+      "description": "Cubic cell edge in meters with voxels_ref (required with voxels)."
+     },
+     "control_points": {
+      "type": "array",
+      "description": "Surveyed {id, lon, lat, elevation_m} points the surface must match before computing."
+     },
+     "control_tolerance_m": {
+      "type": "number",
+      "description": "Control-point match tolerance in meters (required with control_points)."
+     },
+     "layer_id": {
+      "type": "string",
+      "description": "Terrain-preview layer id to check against; refuses when its revision differs from the computed one."
+     }
+    },
+    "required": [
+     "surface_ref",
+     "vertical_datum",
+     "vertical_units",
+     "vertical_epoch",
+     "observer",
+     "target",
+     "surface_sigma_m"
+    ]
+   }
+  },
+  {
+   "name": "terrain_viewshed",
+   "description": "Compute the area viewshed around one observer over a registered terrain grid (res-…@vN): a deterministic lattice of ground targets within radius_m runs the same line-of-sight core per target — identical sampling, curvature/refraction, uncertainty band, and refusal semantics — and reports per-target visible/blocked/indeterminate/outside with tallies. Off-surface lattice points tally as outside, never as invisible. The full table publishes as an artifact citing the surface version. Pass layer_id to refuse when the displayed terrain version is not this one.",
+   "parameters": {
+    "type": "object",
+    "properties": {
+     "surface_ref": {
+      "type": "string",
+      "description": "Exact surface resource ref, `res-…@vN` (registered point grid)."
+     },
+     "vertical_datum": {
+      "type": "string",
+      "description": "Named vertical datum of the surface elevations."
+     },
+     "vertical_units": {
+      "type": "string",
+      "description": "Vertical unit; \"m\" is the supported unit."
+     },
+     "vertical_epoch": {
+      "type": "string",
+      "description": "Datum epoch or the literal \"none\"."
+     },
+     "elevation_field": {
+      "type": "string",
+      "description": "Elevation property; \"elevation\" is the recorded default."
+     },
+     "observer": {
+      "type": "array",
+      "description": "WGS84 [lon, lat] of the observer.",
+      "items": {
+       "type": "number"
+      }
+     },
+     "observer_height_m": {
+      "type": "number",
+      "description": "Observer height above the terrain; 0 is the recorded default."
+     },
+     "observer_elevation_m": {
+      "type": "number",
+      "description": "Absolute observer elevation override."
+     },
+     "radius_m": {
+      "type": "number",
+      "description": "Area radius in meters, up to 20000 (the viewshed bound)."
+     },
+     "max_targets": {
+      "type": "number",
+      "description": "Lattice target bound in [1, 512]; 512 is the recorded default. Nearest targets answer first."
+     },
+     "sampling_interval_m": {
+      "type": "number",
+      "description": "Per-sightline sample spacing in meters; 25 is the recorded default."
+     },
+     "surface_sigma_m": {
+      "type": "number",
+      "description": "Surface elevation one-sigma in meters; the per-target indeterminate band derives from it."
+     },
+     "curvature": {
+      "type": "string",
+      "description": "\"corrected\" (recorded default) or \"none\"."
+     },
+     "refraction_k": {
+      "type": "number",
+      "description": "Refraction coefficient with curvature=corrected; 0.13 is the recorded default."
+     },
+     "buildings_ref": {
+      "type": "string",
+      "description": "Optional building-footprint resource ref."
+     },
+     "height_field": {
+      "type": "string",
+      "description": "Building height property with buildings_ref."
+     },
+     "layer_id": {
+      "type": "string",
+      "description": "Terrain-preview layer id to check against; refuses when its revision differs from the computed one."
+     }
+    }
+   }
+  },
+  {
+   "name": "get_goal",
+   "description": "Read the current same-session goal, including its exact id/revision, objective, phase, completed continuation rounds, round limit, blocker reason when present, and whether another continuation is armed. Call this before updating a goal.",
+   "parameters": {
+    "type": "object",
+    "properties": {}
+   }
+  },
+  {
+   "name": "glob",
+   "description": "Find files whose paths match a glob pattern. Returns matching file paths — never directories — including hidden and ignored files (VCS metadata directories are excluded). Up to 100 paths come back in modification-time order; a larger result returns the first 100 paths in modification-time order, says so, and reports where the complete sorted list was saved. This tool does not enumerate directory entries.",
+   "parameters": {
+    "type": "object",
+    "properties": {
+     "pattern": {
+      "type": "string",
+      "description": "Glob pattern to match file paths against (e.g. \"**/*.ts\", \"src/**/*.test.js\"). A pattern with no \"/\" matches the basename at any depth, so \"*\" and \"*.ts\" both search the whole tree; include a separator to anchor the depth."
+     },
+     "path": {
+      "type": "string",
+      "description": "Directory to search in. Defaults to the session workspace; a relative path resolves against it."
+     }
+    },
+    "required": [
+     "pattern"
+    ]
+   }
+  },
+  {
+   "name": "grep",
+   "description": "Search file contents with a ripgrep regular expression. Returns matching lines with line numbers, grouped by file. Returns the first 250 matches inline; a capped result reports where the complete match list was saved. Use read on a matched file for surrounding context.",
+   "parameters": {
+    "type": "object",
+    "properties": {
+     "pattern": {
+      "type": "string",
+      "description": "Regular expression to search for (ripgrep syntax)."
+     },
+     "path": {
+      "type": "string",
+      "description": "File or directory to search. Defaults to the session workspace; a relative path resolves against it."
+     },
+     "include": {
+      "type": "string",
+      "description": "One glob filter for which files to search (e.g. \"*.ts\", \"*.{js,jsx}\"). Not a list; negation is not supported."
+     }
+    },
+    "required": [
+     "pattern"
+    ]
+   }
+  },
+  {
+   "name": "interrupt_agent",
+   "description": "Request cancellation of a background agent's current turn by its agent id. The target may be your direct child or a deeper agent created under you. Only the current turn stops: messages already queued for the agent stay parked until a later send_message, agents it started keep running, and the agent itself stays available for follow-ups. This call returns as soon as the stop request is accepted, so the target may keep running briefly; interrupting an agent that already finished is an accepted no-op.",
+   "parameters": {
+    "type": "object",
+    "properties": {
+     "agent_id": {
+      "type": "string",
+      "description": "The agent id of the running agent to interrupt."
+     }
+    },
+    "required": [
+     "agent_id"
+    ]
+   }
+  },
+  {
+   "name": "job_kill",
+   "description": "Request cancellation of a running background job by job id. Returns immediately; the job settles as killed once its work actually stops.",
+   "parameters": {
+    "type": "object",
+    "properties": {
+     "job_id": {
+      "type": "string",
+      "description": "Job id returned by the tool that started the background work."
+     },
+     "reason": {
+      "type": "string",
+      "description": "Optional short reason, recorded in the log and forwarded to the job."
+     }
+    },
+    "required": [
+     "job_id"
+    ]
+   }
+  },
+  {
+   "name": "job_list",
+   "description": "List your background jobs (running and finished) with their ids, kinds, and statuses.",
+   "parameters": {
+    "type": "object",
+    "properties": {}
+   }
+  },
+  {
+   "name": "job_output",
+   "description": "Read a background job. Stream jobs return only output since the previous read; final-output jobs return their result after settlement. Every response ends with `[status: ...]`. Reads are non-blocking unless `wait: true`, which waits up to the configured cap.",
+   "parameters": {
+    "type": "object",
+    "properties": {
+     "job_id": {
+      "type": "string",
+      "description": "Job id returned by the tool that started the background work."
+     },
+     "wait": {
+      "type": "boolean",
+      "description": "Block until the job reaches a terminal status or the timeout expires. A timed-out wait returns [status: running] and leaves the job alive."
+     },
+     "timeout_ms": {
+      "type": "number",
+      "description": "Max wait in milliseconds (only meaningful with wait: true). Defaults to the configured wait timeout; capped by the configured maximum."
+     }
+    },
+    "required": [
+     "job_id"
+    ]
+   }
+  },
+  {
+   "name": "list_agents",
+   "description": "List your continuable background subagents by durable id and label. Use it to recall which ones you started, not to poll for completion — you are told when one finishes. Status comes from the live registry: running means the agent is working right now, idle means it is loaded but between turns (it may be waiting on agents it started), and ready means it exists only in storage — resumable, not terminal, and not a result waiting to be collected; a `send_message` steers a running child at its nearest step boundary or starts a turn for an idle or ready child, and a direct child remains a `send_message` candidate in every status. The snapshot is not a delivery promise — `send_message` performs the authoritative check and may still fail. Children that could not be read are reported as diagnostics instead of being silently dropped. Scope `descendants` walks the whole tree below you in stable pre-order, annotating each entry with its durable direct-parent session id and depth. You may use `send_message` only for depth-1 entries; deeper entries are candidates for `interrupt_agent` only.",
+   "parameters": {
+    "type": "object",
+    "properties": {
+     "scope": {
+      "type": "string",
+      "description": "children (default) lists direct children only; descendants walks the complete tree below you.",
+      "enum": [
+       "children",
+       "descendants"
+      ]
+     }
+    }
+   }
+  },
+  {
+   "name": "location_allocate",
+   "description": "Allocate demand points to candidate sites under a budget and per-site capacity: the documented greedy rule opens sites by marginal weighted objective (coverage/equity/cost weights) with capacity-capped nearest-site assignment. Unaffordable sites stay closed and named; capacity shortfalls and uncovered rows keep the honest partial status; absent weights select the flagged default scenario. Optional global mode enumerates the bounded declared affordable-site domain and reports its greedy comparison. Publishes the allocation table as an artifact.",
+   "parameters": {
+    "type": "object",
+    "properties": {
+     "goal_revision": {
+      "type": "number",
+      "description": "Goal revision this analysis belongs to."
+     },
+     "resource_ref": {
+      "type": "string",
+      "description": "Exact resource ref (res-…@vN) of the Point demand rows."
+     },
+     "demand_field": {
+      "type": "string",
+      "description": "Numeric demand property."
+     },
+     "group_field": {
+      "type": "string",
+      "description": "Property partitioning demand into equity groups; rows without it form the group \"all\"."
+     },
+     "sites": {
+      "type": "array",
+      "description": "1–64 { id, lon, lat, capacity, cost } candidate sites.",
+      "items": {
+       "type": "object",
+       "additionalProperties": false,
+       "properties": {
+        "id": {
+         "type": "string"
+        },
+        "lon": {
+         "type": "number"
+        },
+        "lat": {
+         "type": "number"
+        },
+        "capacity": {
+         "type": "number"
+        },
+        "cost": {
+         "type": "number"
+        }
+       },
+       "required": [
+        "id",
+        "lon",
+        "lat",
+        "capacity",
+        "cost"
+       ]
+      }
+     },
+     "coverage_radius_meters": {
+      "type": "number",
+      "description": "Cover radius in meters (great-circle)."
+     },
+     "budget": {
+      "type": "number",
+      "description": "Opening budget; sites above it stay closed and named."
+     },
+     "mode": {
+      "type": "string",
+      "description": "greedy (default) or global bounded exhaustive search over the declared affordable sites.",
+      "enum": [
+       "greedy",
+       "global"
+      ]
+     },
+     "weights": {
+      "type": "object",
+      "description": "{ coverage, equity, cost } value weights; absence selects the flagged default scenario.",
+      "additionalProperties": false,
+      "properties": {
+       "coverage": {
+        "type": "number"
+       },
+       "equity": {
+        "type": "number"
+       },
+       "cost": {
+        "type": "number"
+       }
+      },
+      "required": [
+       "coverage",
+       "equity",
+       "cost"
+      ]
+     }
+    },
+    "required": [
+     "goal_revision",
+     "resource_ref",
+     "demand_field",
+     "sites",
+     "coverage_radius_meters"
+    ]
+   }
+  },
+  {
+   "name": "map_add_layer",
+   "description": "Add a GeoJSON layer to the map container of the current session. Give EITHER `path` (a workspace GeoJSON file; WGS84 lon/lat by default, pass `crs` for projected data) OR `ref` (an exact catalog ref `res-…@vN` from catalog_register, or a published artifact ref `art-…@vN` from geo_buffer) — never both. Versioned layers carry their data identity and display digest.",
+   "parameters": {
+    "type": "object",
+    "properties": {
+     "path": {
+      "type": "string",
+      "description": "GeoJSON file path (workspace-relative or absolute). Legacy branch."
+     },
+     "ref": {
+      "type": "string",
+      "description": "Exact catalog ref (`res-…@vN` resource or `art-…@vN` artifact). Versioned branch."
+     },
+     "name": {
+      "type": "string",
+      "description": "Human-readable layer name; defaults to the file base name or resource identity."
+     },
+     "crs": {
+      "type": "string",
+      "description": "Source CRS for `path` inputs, e.g. \"EPSG:4547\" or a +proj= string. Defaults to WGS84. Ignored with `ref` (the version records its CRS)."
+     },
+     "layer_id": {
+      "type": "string",
+      "description": "Stable layer id; re-adding an id replaces the layer."
+     }
+    }
+   }
+  },
+  {
+   "name": "map_apply_patch",
+   "description": "Apply a conditional multi-op patch to the session map as one atomic change (one new revision). Each op may carry expectations (digests/absence/order/values read via map_get_state); a stale op conflicts with a per-op diff and NOTHING applies — re-read and re-decide. Repeating an operation_id replays its first outcome instead of applying twice. Deletes of already-deleted layers are never replayed.",
+   "parameters": {
+    "type": "object",
+    "properties": {
+     "patch": {
+      "description": "Array of 1..8 conditional ops: {kind:\"upsert-layer\",layer:{id,name,data,sourceCrs,opacity,visible,digest?},expect?} | {kind:\"remove-layer\",layerId,expect?:{digest}} | {kind:\"reorder-layers\",layerIds,expect?:{order}} | {kind:\"set-view\",view:{center,zoom,wkid},expect?:{viewDigest}} | {kind:\"set-mode\",mode,expect?:{mode}} | {kind:\"set-style\",entries:[{layerId,style|null,expect?}]} | {kind:\"set-aoi\",aoi:{name?,ring}|null}. expect fields name what you read: {digest,absent,order,viewDigest,mode,aoiDigest}."
+     },
+     "expected_revision": {
+      "type": "number",
+      "description": "The map revision this patch was prepared against (map_get_state)."
+     },
+     "operation_id": {
+      "type": "string",
+      "description": "Client operation id for idempotency; repeating it replays the first outcome."
+     },
+     "writer_id": {
+      "type": "string",
+      "description": "Registered writer to commit as; defaults to this session's own writer."
+     }
+    },
+    "required": [
+     "patch",
+     "expected_revision"
+    ]
+   }
+  },
+  {
+   "name": "map_get_state",
+   "description": "Read the current session's map container state: every layer (id, name, feature count, visibility, content digest), the view, the current revision (cite it as expected_revision when patching), the AOI, and the recent operation history (undo targets).",
+   "parameters": {
+    "type": "object",
+    "properties": {}
+   }
+  },
+  {
+   "name": "map_remove_layer",
+   "description": "Remove one layer (by layer id) from the current session's map container.",
+   "parameters": {
+    "type": "object",
+    "properties": {
+     "layer_id": {
+      "type": "string",
+      "description": "The layer id previously reported by map_add_layer."
+     }
+    },
+    "required": [
+     "layer_id"
+    ]
+   }
+  },
+  {
+   "name": "map_save",
+   "description": "Durably save the current session's map: confirm the referenced resource/artifact bytes in the map store, then checkpoint the accepted session prefix. Returns a receipt with the covered sequence, the map revision, and each storage stage's independent status.",
+   "parameters": {
+    "type": "object",
+    "properties": {
+     "map_revision": {
+      "type": "number",
+      "description": "Expected current map revision; a mismatch refuses the save before any I/O."
+     }
+    }
+   }
+  },
+  {
+   "name": "map_set_mode",
+   "description": "Switch the current session's map container between 2D (`map`) and 3D (`scene`). The 3D scene is a local scene: it supports projected coordinate systems and renders extruded, draped, and elevated data.",
+   "parameters": {
+    "type": "object",
+    "properties": {
+     "mode": {
+      "oneOf": [
+       {
+        "type": "string",
+        "description": "2D MapView.",
+        "const": "map"
+       },
+       {
+        "type": "string",
+        "description": "3D local SceneView.",
+        "const": "scene"
+       }
+      ],
+      "description": "\"map\" for 2D or \"scene\" for 3D."
+     }
+    },
+    "required": [
+     "mode"
+    ]
+   }
+  },
+  {
+   "name": "map_set_view",
+   "description": "Move the map view of the current session. `center` is WGS84 [lon, lat]. `zoom` follows the Web-Mercator scale convention. Optionally set the display projection `wkid` (any well-known WKID; 3D local scenes accept projected WKIDs such as CGCS2000 zones).",
+   "parameters": {
+    "type": "object",
+    "properties": {
+     "center": {
+      "type": "array",
+      "description": "WGS84 [lon, lat] pair.",
+      "items": {
+       "type": "number"
+      }
+     },
+     "zoom": {
+      "type": "number",
+      "description": "Zoom level; larger is closer."
+     },
+     "wkid": {
+      "type": "number",
+      "description": "Display projection WKID (default keeps the current one; 4326 = WGS84 geographic)."
+     }
+    },
+    "required": [
+     "center"
+    ]
+   }
+  },
+  {
+   "name": "map_undo",
+   "description": "Undo one recorded map operation by proposing its compensating change as a NEW revision (history stays). Without undo_of, undoes the newest still-live operation (repeat to walk back). Another writer having changed the affected slice since conflicts the undo — re-decide explicitly. External artifacts and files are NOT rolled back.",
+   "parameters": {
+    "type": "object",
+    "properties": {
+     "undo_of": {
+      "type": "number",
+      "description": "Operation index to undo (from map_get_state history); default walks the newest undoable operation."
+     },
+     "expected_revision": {
+      "type": "number",
+      "description": "Refuse unless the map is still at this revision."
+     },
+     "operation_id": {
+      "type": "string",
+      "description": "Client operation id for the undo itself (idempotency)."
+     },
+     "writer_id": {
+      "type": "string",
+      "description": "Registered writer to commit as; defaults to this session's own writer."
+     }
+    }
+   }
+  },
+  {
+   "name": "pattern_change",
+   "description": "Measure per-unit change between two ordered, non-overlapping sub-windows inside one observation window: comparison must start at or after baseline ends (time-forward). Units missing a window stay unknown — no zero-filling; sparse windows return not_applicable. Reports the forward-holdout drift and per-spatial-block deltas. Publishes the full per-unit table as an artifact.",
+   "parameters": {
+    "type": "object",
+    "properties": {
+     "goal_revision": {
+      "type": "number",
+      "description": "Goal revision this statistic belongs to."
+     },
+     "resource_ref": {
+      "type": "string",
+      "description": "Exact resource ref (res-…@vN) of the time-stamped observations."
+     },
+     "field": {
+      "type": "string",
+      "description": "Numeric property the change summarizes."
+     },
+     "time_field": {
+      "type": "string",
+      "description": "Property holding each observation's ISO event time."
+     },
+     "baseline_from": {
+      "type": "string",
+      "description": "Baseline window start (ISO, inside the observation window)."
+     },
+     "baseline_to": {
+      "type": "string",
+      "description": "Baseline window end, exclusive."
+     },
+     "comparison_from": {
+      "type": "string",
+      "description": "Comparison window start; must be at or after the baseline end."
+     },
+     "comparison_to": {
+      "type": "string",
+      "description": "Comparison window end, exclusive."
+     },
+     "observation_from": {
+      "type": "string",
+      "description": "The containing observation window start."
+     },
+     "observation_to": {
+      "type": "string",
+      "description": "The containing observation window end, exclusive."
+     },
+     "block_meters": {
+      "type": "number",
+      "description": "Spatial block size in meters for the per-block delta rows."
+     },
+     "unit_field": {
+      "type": "string",
+      "description": "Property grouping observations into one unit across time (for example a device id); absent means each feature is its own unit."
+     },
+     "granularity": {
+      "type": "string",
+      "description": "day (default), week, or month — the UTC calendar bin."
+     },
+     "min_coverage": {
+      "type": "number",
+      "description": "Occupied-bin fraction the window must reach (default 0.6); below it the tool refuses."
+     },
+     "holdout_blocks": {
+      "type": "number",
+      "description": "Last k bins held out for the stability drift (default 1)."
+     }
+    },
+    "required": [
+     "goal_revision",
+     "resource_ref",
+     "field",
+     "time_field",
+     "baseline_from",
+     "baseline_to",
+     "comparison_from",
+     "comparison_to",
+     "observation_from",
+     "observation_to",
+     "block_meters"
+    ]
+   }
+  },
+  {
+   "name": "pattern_cluster",
+   "description": "Cluster time-stamped observations in space and time (DBSCAN over meters and UTC calendar bins): neighbors share both the spatial radius and the temporal radius. Noise points are labeled, never forced into clusters; too few points or a sparse window is an honest not_applicable. The forward holdout reports how many holdout observations a prefix core still reaches. Publishes the full assignment table as an artifact.",
+   "parameters": {
+    "type": "object",
+    "properties": {
+     "goal_revision": {
+      "type": "number",
+      "description": "Goal revision this statistic belongs to."
+     },
+     "resource_ref": {
+      "type": "string",
+      "description": "Exact resource ref (res-…@vN) of the time-stamped observations."
+     },
+     "field": {
+      "type": "string",
+      "description": "Numeric property the cluster summaries average."
+     },
+     "time_field": {
+      "type": "string",
+      "description": "Property holding each observation's ISO event time."
+     },
+     "observation_from": {
+      "type": "string",
+      "description": "Observation window start (ISO)."
+     },
+     "observation_to": {
+      "type": "string",
+      "description": "Observation window end, exclusive."
+     },
+     "eps_meters": {
+      "type": "number",
+      "description": "Spatial radius in meters (great-circle)."
+     },
+     "eps_bins": {
+      "type": "number",
+      "description": "Temporal radius in granularity bins."
+     },
+     "min_pts": {
+      "type": "number",
+      "description": "Core-point threshold (neighbors including self)."
+     },
+     "block_meters": {
+      "type": "number",
+      "description": "Spatial block size in meters for the participation rows."
+     },
+     "granularity": {
+      "type": "string",
+      "description": "day (default), week, or month."
+     },
+     "min_coverage": {
+      "type": "number",
+      "description": "Occupied-bin fraction the window must reach (default 0.6)."
+     },
+     "holdout_blocks": {
+      "type": "number",
+      "description": "Last k bins held out for the forward-fit check (default 1)."
+     }
+    },
+    "required": [
+     "goal_revision",
+     "resource_ref",
+     "field",
+     "time_field",
+     "observation_from",
+     "observation_to",
+     "eps_meters",
+     "eps_bins",
+     "min_pts",
+     "block_meters"
+    ]
+   }
+  },
+  {
+   "name": "pattern_flow",
+   "description": "Extract origin-destination flows of moving entities over a fixed cell grid: consecutive observations of one entity contribute a cell-to-cell transition, in-cell stays count as flows, and a chain gap above max_gap_bins breaks the transition instead of being interpolated. Sparse windows are honest refusals. Stability is the top-K Jaccard between the prefix (holdout bins dropped) and the full window. Publishes the flow table as an artifact.",
+   "parameters": {
+    "type": "object",
+    "properties": {
+     "goal_revision": {
+      "type": "number",
+      "description": "Goal revision this statistic belongs to."
+     },
+     "resource_ref": {
+      "type": "string",
+      "description": "Exact resource ref (res-…@vN) of the time-stamped observations."
+     },
+     "time_field": {
+      "type": "string",
+      "description": "Property holding each observation's ISO event time."
+     },
+     "entity_field": {
+      "type": "string",
+      "description": "Property identifying the moving entity."
+     },
+     "observation_from": {
+      "type": "string",
+      "description": "Observation window start (ISO)."
+     },
+     "observation_to": {
+      "type": "string",
+      "description": "Observation window end, exclusive."
+     },
+     "cell_meters": {
+      "type": "number",
+      "description": "Flow grid cell size in meters."
+     },
+     "granularity": {
+      "type": "string",
+      "description": "day (default), week, or month."
+     },
+     "min_coverage": {
+      "type": "number",
+      "description": "Occupied-bin fraction the window must reach (default 0.6)."
+     },
+     "holdout_blocks": {
+      "type": "number",
+      "description": "Last k bins held out for the top-K jaccard (default 1)."
+     },
+     "max_gap_bins": {
+      "type": "number",
+      "description": "Chain gaps above this many bins break the transition (default 1)."
+     },
+     "top_k": {
+      "type": "number",
+      "description": "Flows in the reported top table (1–256, default 16)."
+     }
+    },
+    "required": [
+     "goal_revision",
+     "resource_ref",
+     "time_field",
+     "entity_field",
+     "observation_from",
+     "observation_to",
+     "cell_meters"
+    ]
+   }
+  },
+  {
+   "name": "read",
+   "description": "Read a UTF-8 text file and return line-numbered content.",
+   "parameters": {
+    "type": "object",
+    "properties": {
+     "file_path": {
+      "type": "string",
+      "description": "Path to read, resolved by the filesystem backend."
+     },
+     "offset": {
+      "type": "number",
+      "description": "1-based first line to return. Defaults to 1."
+     },
+     "limit": {
+      "type": "number",
+      "description": "Maximum number of lines to return. Defaults to 2000."
+     }
+    },
+    "required": [
+     "file_path"
+    ]
+   }
+  },
+  {
+   "name": "read_image",
+   "description": "Read a PNG/JPEG/WebP/GIF file and return the image itself. A path without a file extension is accepted; the format is detected from the file content, so normalized attachment paths can be passed directly without copying or renaming. Harness validates and downscales large supported images before the next model request, so use this tool directly instead of installing image libraries or creating thumbnails merely to inspect an image. Independent files may be read concurrently in small batches. Requires the current model to accept image input.",
+   "parameters": {
+    "type": "object",
+    "properties": {
+     "file_path": {
+      "type": "string",
+      "description": "Path to the image file, resolved by the filesystem backend."
+     }
+    },
+    "required": [
+     "file_path"
+    ]
+   }
+  },
+  {
+   "name": "run_cancel",
+   "description": "Request cancellation of one accessibility run by run_id. This is a request, not a verdict: the worker either stops at its next checkpoint (cancelled) or completes the work already done (the real outcome with the cancel request recorded). Query run_get for the adjudicated terminal state.",
+   "parameters": {
+    "type": "object",
+    "properties": {
+     "run_id": {
+      "type": "string",
+      "description": "The run_id run_submit returned."
+     }
+    },
+    "required": [
+     "run_id"
+    ]
+   }
+  },
+  {
+   "name": "run_get",
+   "description": "Read one accessibility run's durable status by run_id: queued, running, cancelRequested, or a terminal partial/succeeded/failed/cancelled/outcomeUnknown with its metrics and artifact refs. The query never re-executes the run; a timeout on the original submit does not mean the run ended — query it here.",
+   "parameters": {
+    "type": "object",
+    "properties": {
+     "run_id": {
+      "type": "string",
+      "description": "The run_id run_submit returned."
+     }
+    },
+    "required": [
+     "run_id"
+    ]
+   }
+  },
+  {
+   "name": "run_submit",
+   "description": "Submit an accessibility analysis as a long-running job: population-weighted network coverage over the exact registered resource versions you cite, with optional candidate-option comparison. Returns a stable run_id and operation_ref immediately; the computation runs server-side with cancel checkpoints. Query progress with run_get (it never re-executes) and request cancellation with run_cancel. Crossing extents must nest study ⊆ retrieval ⊆ support; a walk/bike/drive target without a priced network fails as METHOD_NOT_APPLICABLE instead of falling back to a straight-line buffer.",
+   "parameters": {
+    "type": "object",
+    "properties": {
+     "goal_revision": {
+      "type": "number",
+      "description": "Current goal revision this run belongs to; a finished run of an older revision never overrides a newer goal."
+     },
+     "population_ref": {
+      "type": "string",
+      "description": "Exact population resource ref (res-…@vN) from catalog_register."
+     },
+     "population_field": {
+      "type": "string",
+      "description": "Numeric property holding each unit's population (the denominator)."
+     },
+     "facility_refs": {
+      "description": "Array of exact facility resource refs (res-…@vN)."
+     },
+     "travel_mode": {
+      "type": "string",
+      "description": "walk, bike, or drive — the network mode the impedance prices."
+     },
+     "max_minutes": {
+      "type": "number",
+      "description": "Service-area budget in network minutes (1–240)."
+     },
+     "time_slices": {
+      "description": "Array from morning-peak | midday | evening-peak | night."
+     },
+     "study_area": {
+      "description": "[west, south, east, north] — results are reported for units inside."
+     },
+     "retrieval_extent": {
+      "description": "[west, south, east, north] — contains the study area."
+     },
+     "support_extent": {
+      "description": "[west, south, east, north] — contains the retrieval extent; facilities inside still serve across the study boundary."
+     },
+     "observation_from": {
+      "type": "string",
+      "description": "Observation window start (ISO-8601 with offset)."
+     },
+     "observation_to": {
+      "type": "string",
+      "description": "Observation window end, exclusive."
+     },
+     "training_from": {
+      "type": "string",
+      "description": "Historical lookback window start; must end at or before the observation start."
+     },
+     "training_to": {
+      "type": "string",
+      "description": "Historical lookback window end."
+     },
+     "entrances": {
+      "description": "Array of { facility, lon, lat } network access points; facilities without any entrance are excluded and named."
+     },
+     "capacities": {
+      "description": "Object facility id → maximum population served (hard cap; overflow stays uncovered)."
+     },
+     "barriers": {
+      "description": "Array of { from: [lon, lat], to: [lon, lat], kind: blocked|delay, delay_minutes? }."
+     },
+     "candidates": {
+      "description": "Array of up to 8 { id, label, facilities: [{ id, lon, lat, capacity?, entrance? }], cost } — only these given options are compared (no global optimum)."
+     },
+     "weights": {
+      "description": "{ coverage, equity, cost } comparison weights; required with candidates."
+     },
+     "cost_budget": {
+      "type": "number",
+      "description": "Total candidate cost budget; over-budget options are reported infeasible."
+     },
+     "retry_of": {
+      "type": "number",
+      "description": "Seq of this session's original run_submit tool/call: returns the already-submitted run and never resubmits."
+     }
+    },
+    "required": [
+     "goal_revision",
+     "population_ref",
+     "population_field",
+     "facility_refs",
+     "travel_mode",
+     "max_minutes",
+     "time_slices",
+     "study_area",
+     "retrieval_extent",
+     "support_extent",
+     "observation_from",
+     "observation_to"
+    ]
+   }
+  },
+  {
+   "name": "scale_ingest",
+   "description": "Copy one registered resource version (res-…@vN from catalog_register) into the distributed-scale chunk store as an immutable, content-addressed version (scl-…@digest). The version is chunked into bounded row groups with per-chunk digests and bbox indexes, carries schema/CRS/time/authorization metadata, and is the only thing scale_read and scale_scan consume. Ingesting identical bytes again returns the existing version.",
+   "parameters": {
+    "type": "object",
+    "properties": {
+     "source_ref": {
+      "type": "string",
+      "description": "Registered resource ref to copy, `res-…@vN`."
+     },
+     "resource_id": {
+      "type": "string",
+      "description": "Stable scale resource id, `[a-z0-9][a-z0-9-]{0,63}`."
+     },
+     "chunk_rows": {
+      "type": "number",
+      "description": "Rows per chunk; 2048 is the recorded budget."
+     },
+     "time_field": {
+      "type": "string",
+      "description": "Property holding each feature's ISO event time; its observed range is recorded."
+     }
+    },
+    "required": [
+     "source_ref",
+     "resource_id"
+    ]
+   }
+  },
+  {
+   "name": "scale_read",
+   "description": "Run one bounded read against a scale version (scl-…@digest). kind=range reads a consecutive chunk window (from_chunk + chunks, capped by the row/byte budgets) and returns a resume cursor; kind=tile reads one extent-grid cell (z/x/y), pruning whole chunks by their bbox; kind=query folds a predicate (field, op, value) across the version. Returns counts, aggregates, cursors, and a capped sample — never the bulk rows.",
+   "parameters": {
+    "type": "object",
+    "properties": {
+     "resource_ref": {
+      "type": "string",
+      "description": "Scale version ref, `scl-…@<digest12>`."
+     },
+     "kind": {
+      "type": "string",
+      "description": "Read kind: \"range\", \"tile\", or \"query\"."
+     },
+     "from_chunk": {
+      "type": "number",
+      "description": "range: first chunk index (0-based)."
+     },
+     "chunks": {
+      "type": "number",
+      "description": "range: chunk count to read."
+     },
+     "z": {
+      "type": "number",
+      "description": "tile: grid zoom (2^z cells over the version extent)."
+     },
+     "x": {
+      "type": "number",
+      "description": "tile: grid column."
+     },
+     "y": {
+      "type": "number",
+      "description": "tile: grid row from south."
+     },
+     "field": {
+      "type": "string",
+      "description": "query: numeric property to compare."
+     },
+     "op": {
+      "type": "string",
+      "description": "query: one of > >= < <= == !=."
+     },
+     "value": {
+      "type": "number",
+      "description": "query: comparison value."
+     }
+    },
+    "required": [
+     "resource_ref",
+     "kind"
+    ]
+   }
+  },
+  {
+   "name": "scale_scan",
+   "description": "Scan a scale version (scl-…@digest) with a predicate (field, op, value) in a dedicated worker process: every chunk is digest-verified before scanning, progress checkpoints accumulate, and a cancelled call stops the worker at a chunk boundary before settling. On success the fixed conclusion (aggregate + capped sample as GeoJSON) is published as an immutable catalog artifact citing the source resource. retry_of returns an already-published scan and never recomputes.",
+   "parameters": {
+    "type": "object",
+    "properties": {
+     "resource_ref": {
+      "type": "string",
+      "description": "Scale version ref, `scl-…@<digest12>`."
+     },
+     "field": {
+      "type": "string",
+      "description": "Numeric property to compare."
+     },
+     "op": {
+      "type": "string",
+      "description": "One of > >= < <= == !=."
+     },
+     "value": {
+      "type": "number",
+      "description": "Comparison value."
+     },
+     "retry_of": {
+      "type": "number",
+      "description": "Seq of this session's original scale_scan `tool/call`: returns the already-published artifact and never recomputes."
+     }
+    },
+    "required": [
+     "resource_ref",
+     "field",
+     "op",
+     "value"
+    ]
+   }
+  },
+  {
+   "name": "scenario_compare",
+   "description": "Compare the given candidate schemes (up to 16) against the status quo under explicit coverage/equity/cost weights. Every candidate stays in the output: infeasible ones keep their named reasons (overpromise, capacity-exceeded, over-budget) and no rank. Absent weights select one recorded default scenario that is flagged `default_scenario` — never the objective unique optimum. The sensitivity table re-ranks under the fixed weight sweep and reports whether the top candidate is stable. This ranks given candidates only; it is not a global optimum.",
+   "parameters": {
+    "type": "object",
+    "properties": {
+     "goal_revision": {
+      "type": "number",
+      "description": "Goal revision this analysis belongs to."
+     },
+     "groups": {
+      "type": "array",
+      "description": "1–16 { id, demand } groups; demand is the coverage weight.",
+      "items": {
+       "type": "object",
+       "additionalProperties": false,
+       "properties": {
+        "id": {
+         "type": "string"
+        },
+        "demand": {
+         "type": "number"
+        }
+       },
+       "required": [
+        "id",
+        "demand"
+       ]
+      }
+     },
+     "candidates": {
+      "type": "array",
+      "description": "1–16 { id, cost, served, capacity? } schemes; served lists { group, amount } pairs.",
+      "items": {
+       "type": "object",
+       "additionalProperties": false,
+       "properties": {
+        "id": {
+         "type": "string"
+        },
+        "cost": {
+         "type": "number"
+        },
+        "capacity": {
+         "type": "number"
+        },
+        "served": {
+         "type": "array",
+         "items": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+           "group": {
+            "type": "string"
+           },
+           "amount": {
+            "type": "number"
+           }
+          },
+          "required": [
+           "group",
+           "amount"
+          ]
+         }
+        }
+       },
+       "required": [
+        "id",
+        "cost",
+        "served"
+       ]
+      }
+     },
+     "budget": {
+      "type": "number",
+      "description": "Total-cost budget; candidates above it stay listed as infeasible."
+     },
+     "weights": {
+      "type": "object",
+      "description": "{ coverage, equity, cost } value weights; absence selects the flagged default scenario.",
+      "additionalProperties": false,
+      "properties": {
+       "coverage": {
+        "type": "number"
+       },
+       "equity": {
+        "type": "number"
+       },
+       "cost": {
+        "type": "number"
+       }
+      },
+      "required": [
+       "coverage",
+       "equity",
+       "cost"
+      ]
+     }
+    },
+    "required": [
+     "goal_revision",
+     "groups",
+     "candidates"
+    ]
+   }
+  },
+  {
+   "name": "send_message",
+   "description": "Send a message to a direct continuable child by its agent id. If you are a resident continuable child, you may also target your direct parent. If the target is still working, the message steers its nearest step; if it is idle, the message starts a turn. This call returns no answer from the agent — only confirmation that the message was delivered. A failure means the message was NOT delivered.",
+   "parameters": {
+    "type": "object",
+    "properties": {
+     "agent_id": {
+      "type": "string",
+      "description": "The agent id of your direct continuable child, or your direct parent when you are a resident continuable child."
+     },
+     "message": {
+      "type": "string",
+      "description": "The message to deliver to the agent."
+     }
+    },
+    "required": [
+     "agent_id",
+     "message"
+    ]
+   }
+  },
+  {
+   "name": "skill",
+   "description": "Load the full instructions for an available skill. Call this with the exact skill name from the session skill catalog before acting on a task that names or clearly matches that skill.",
+   "parameters": {
+    "type": "object",
+    "properties": {
+     "name": {
+      "type": "string",
+      "description": "The exact skill name from the available skills list."
+     }
+    },
+    "required": [
+     "name"
+    ]
+   }
+  },
+  {
+   "name": "stats_autocorrelation",
+   "description": "Measure spatial association of one versioned field: global Moran's I with a seeded permutation p-value plus the local LISA high-high/low-low/high-low/low-high decomposition under the declared multiple-testing correction. Constant fields and too-few-unit tables are honest not_applicable results; correlations are never causal claims. Publishes the full per-unit table as an artifact.",
+   "parameters": {
+    "type": "object",
+    "properties": {
+     "goal_revision": {
+      "type": "number",
+      "description": "Goal revision this statistic belongs to."
+     },
+     "resource_ref": {
+      "type": "string",
+      "description": "Exact resource ref (res-…@vN) of the observation units."
+     },
+     "field": {
+      "type": "string",
+      "description": "Numeric property to test."
+     },
+     "band_meters": {
+      "type": "number",
+      "description": "Distance-band neighbor threshold in meters (great-circle)."
+     },
+     "standardization": {
+      "type": "string",
+      "description": "row (default) or binary weight standardization; recorded in the spec."
+     },
+     "permutations": {
+      "type": "number",
+      "description": "Permutation redraws (9–999, default 199); recorded with the seed."
+     },
+     "seed": {
+      "type": "number",
+      "description": "Deterministic permutation seed (default 20260924); same seed reproduces every p-value."
+     },
+     "multiple_testing": {
+      "type": "string",
+      "description": "fdr-bh (default), bonferroni, or none — applied to the local p-values."
+     }
+    },
+    "required": [
+     "goal_revision",
+     "resource_ref",
+     "field",
+     "band_meters"
+    ]
+   }
+  },
+  {
+   "name": "stats_hotspot",
+   "description": "Detect cold/hotspot concentrations of one versioned field with Getis-Ord Gi*: each unit's self-inclusive neighbor sum is tested by a seeded permutation, the declared correction applies to the local p-values, and the fixed 0.05 alpha labels hotspot/coldspot. Density and significance stay separate claims. Publishes the full per-unit table as an artifact.",
+   "parameters": {
+    "type": "object",
+    "properties": {
+     "goal_revision": {
+      "type": "number",
+      "description": "Goal revision this statistic belongs to."
+     },
+     "resource_ref": {
+      "type": "string",
+      "description": "Exact resource ref (res-…@vN) of the observation units."
+     },
+     "field": {
+      "type": "string",
+      "description": "Numeric property to test."
+     },
+     "band_meters": {
+      "type": "number",
+      "description": "Distance-band neighbor threshold in meters (great-circle)."
+     },
+     "standardization": {
+      "type": "string",
+      "description": "row (default) or binary weight standardization; recorded in the spec."
+     },
+     "permutations": {
+      "type": "number",
+      "description": "Permutation redraws (9–999, default 199); recorded with the seed."
+     },
+     "seed": {
+      "type": "number",
+      "description": "Deterministic permutation seed (default 20260924)."
+     },
+     "multiple_testing": {
+      "type": "string",
+      "description": "fdr-bh (default), bonferroni, or none — applied to the local p-values."
+     }
+    },
+    "required": [
+     "goal_revision",
+     "resource_ref",
+     "field",
+     "band_meters"
+    ]
+   }
+  },
+  {
+   "name": "stats_zonal",
+   "description": "Summarize a numeric field of one registered resource version per zone attribute (or over the whole area): count, valid/missing, sum, mean, min/max, population dispersion, and — with a denominator field — the weighted mean and the sum-rate. Reads the frozen catalog version, publishes the full zone table as an artifact, and reports limitations beside every aggregate. Zero valid units is an honest not_applicable.",
+   "parameters": {
+    "type": "object",
+    "properties": {
+     "goal_revision": {
+      "type": "number",
+      "description": "Goal revision this statistic belongs to (diagnostic bookkeeping)."
+     },
+     "resource_ref": {
+      "type": "string",
+      "description": "Exact resource ref (res-…@vN) of the observation units."
+     },
+     "field": {
+      "type": "string",
+      "description": "Numeric property to summarize."
+     },
+     "zone_field": {
+      "type": "string",
+      "description": "Property whose distinct values form the zones; the feature property name \"zone\" is used when absent."
+     },
+     "denominator_field": {
+      "type": "string",
+      "description": "Positive denominator property enabling the weighted mean and the sum-rate; the feature property name \"denominator\" is used when absent."
+     }
+    },
+    "required": [
+     "goal_revision",
+     "resource_ref",
+     "field"
+    ]
+   }
+  },
+  {
+   "name": "stream_advance",
+   "description": "Advance a stream workbench by up to 256 scenario batches (one step admits the next batch into the bounded intake, processes up to the quota, closes windows the watermark passed, and materializes bounded data gaps). Returns one additive summary: admitted, processed, duplicates dropped, backpressure holds, windows closed, late revisions, gaps. The layer folds the updated window projection and the resumable checkpoint.",
+   "parameters": {
+    "type": "object",
+    "properties": {
+     "stream_id": {
+      "type": "string",
+      "description": "The workbench to advance."
+     },
+     "steps": {
+      "type": "number",
+      "description": "Batches to advance; 1 is the recorded default, 256 the cap."
+     }
+    },
+    "required": [
+     "stream_id"
+    ]
+   }
+  },
+  {
+   "name": "stream_materialize",
+   "description": "Materialize a stream workbench: export every settled window (closed, late-revised, and data-gap) at its current revision as one immutable catalog artifact, cite the scenario version it was computed from, and fix the layer as the final materialized state. Re-materializing an unchanged state returns the existing artifact ref — never a second publication. After materialization the workbench is closed: further advances refuse.",
+   "parameters": {
+    "type": "object",
+    "properties": {
+     "stream_id": {
+      "type": "string",
+      "description": "The workbench to materialize."
+     }
+    },
+    "required": [
+     "stream_id"
+    ]
+   }
+  },
+  {
+   "name": "stream_open",
+   "description": "Open a realtime stream workbench over one registered scenario resource (res-…@vN). The scenario is a FeatureCollection of wire events grouped by `batch` (properties: event_id, event_time_ms, value; Point coordinates are WGS84 lon/lat; a feature with offline:true marks its batch as source-disconnected). Requires an explicit tumbling window_ms and allowed lateness_ms — the watermark trails the max event time by that much, and windows close when it passes their end. The workbench is pull-based: nothing runs between calls. Advance it with stream_advance; fix its conclusions with stream_materialize.",
+   "parameters": {
+    "type": "object",
+    "properties": {
+     "scenario_ref": {
+      "type": "string",
+      "description": "Registered scenario resource ref, `res-…@vN`."
+     },
+     "stream_id": {
+      "type": "string",
+      "description": "Stable workbench id; becomes the layer id. Re-opening one id replaces the workbench."
+     },
+     "name": {
+      "type": "string",
+      "description": "Human-readable layer name; defaults to the stream id."
+     },
+     "window_ms": {
+      "type": "number",
+      "description": "Tumbling window size in milliseconds."
+     },
+     "lateness_ms": {
+      "type": "number",
+      "description": "Allowed lateness in milliseconds; the watermark trails max event time by this much."
+     },
+     "dedup_capacity": {
+      "type": "number",
+      "description": "Distinct event ids the dedup window retains; 1024 is the recorded default."
+     },
+     "buffer_capacity": {
+      "type": "number",
+      "description": "Intake buffer bound; 256 is the recorded default. A full buffer holds the source back."
+     },
+     "max_events_per_advance": {
+      "type": "number",
+      "description": "Processing quota per advance; 512 is the recorded default. The slow-consumer bound."
+     },
+     "max_open_windows": {
+      "type": "number",
+      "description": "Open-window state bound; 64 is the recorded default."
+     },
+     "max_revisions_per_window": {
+      "type": "number",
+      "description": "Late-revision ledger bound per window; 8 is the recorded default."
+     }
+    },
+    "required": [
+     "scenario_ref",
+     "stream_id",
+     "window_ms",
+     "lateness_ms"
+    ]
+   }
+  },
+  {
+   "name": "stream_pause",
+   "description": "Pause a stream workbench: subsequent stream_advance calls refuse until stream_resume. The intake buffer, windows, and checkpoint freeze exactly; the folded layer keeps carrying the stream status.",
+   "parameters": {
+    "type": "object",
+    "properties": {
+     "stream_id": {
+      "type": "string",
+      "description": "The workbench to pause."
+     }
+    },
+    "required": [
+     "stream_id"
+    ]
+   }
+  },
+  {
+   "name": "stream_resume",
+   "description": "Resume a paused stream workbench: the source continues exactly at the frozen batch cursor and intake buffer.",
+   "parameters": {
+    "type": "object",
+    "properties": {
+     "stream_id": {
+      "type": "string",
+      "description": "The workbench to resume."
+     }
+    },
+    "required": [
+     "stream_id"
+    ]
+   }
+  },
+  {
+   "name": "subagent",
+   "description": "Delegate a self-contained task to a subagent (a separate agent that works in its own context) to offload focused, independent work — research, a scoped implementation, an analysis — so it does not consume this conversation's context. The subagent returns its result, not its intermediate steps. Give it a complete, standalone prompt: it does not see this conversation. This tool runs in the background by default, immediately returns a durable subagent id, and keeps the child conversation available for later turns. When that run settles, the runtime sends the parent a notice containing its outcome and any final assistant message; `send_message` steers the child's nearest step while it is running and starts a turn while it is idle. Set `run_in_background: false` only when your next action depends on receiving the result.",
+   "parameters": {
+    "type": "object",
+    "properties": {
+     "description": {
+      "type": "string",
+      "description": "A short (3-5 word) description of the delegated task, for display."
+     },
+     "prompt": {
+      "type": "string",
+      "description": "The complete, self-contained task for the subagent. It does not share this conversation's context, so include everything it needs."
+     },
+     "run_in_background": {
+      "type": "boolean",
+      "description": "Whether to run in the background and return a durable subagent id immediately. Defaults to true. Set false to wait for the result when your next action depends on it."
+     }
+    },
+    "required": [
+     "description",
+     "prompt"
+    ]
+   }
+  },
+  {
+   "name": "subagent_fork",
+   "description": "Delegate a task to a subagent that inherits this conversation: a child agent seeded with all completed turns so far (it does not see the current in-flight turn). Use this when the subtask builds on this conversation's context — a follow-up analysis, a review, a continuation — without consuming this conversation's context for the work itself. You receive its result, not its intermediate steps. This call waits for the subagent and returns its result.",
+   "parameters": {
+    "type": "object",
+    "properties": {
+     "description": {
+      "type": "string",
+      "description": "A short (3-5 word) description of the delegated task, for display."
+     },
+     "prompt": {
+      "type": "string",
+      "description": "The task for the subagent. It already sees this conversation's completed turns, so build on them freely and state only what is new."
+     }
+    },
+    "required": [
+     "description",
+     "prompt"
+    ]
+   }
+  },
+  {
+   "name": "terrain_add_layer",
+   "description": "Add a terrain-preview layer to the map from one exact catalog surface version (res-…@vN). The surface is a registered grid of points carrying elevations under `elevation_field`; vertical metadata (datum/units/epoch) is required and recorded — there is no default datum. The preview is a bounded decimation for 2D/3D display; run visibility analysis against the same version with geo_line_of_sight.",
+   "parameters": {
+    "type": "object",
+    "properties": {
+     "ref": {
+      "type": "string",
+      "description": "Exact surface resource ref, `res-…@vN` (a registered point grid)."
+     },
+     "vertical_datum": {
+      "type": "string",
+      "description": "Named vertical datum, e.g. EGM96, NAVD88, ellipsoid-WGS84."
+     },
+     "vertical_units": {
+      "type": "string",
+      "description": "Vertical unit; \"m\" is the supported unit."
+     },
+     "vertical_epoch": {
+      "type": "string",
+      "description": "Datum epoch or realization, e.g. \"2010.00\"; literal \"none\" for datum-less ellipsoidal heights."
+     },
+     "elevation_field": {
+      "type": "string",
+      "description": "Numeric property holding each grid point's elevation; \"elevation\" is the recorded default."
+     },
+     "name": {
+      "type": "string",
+      "description": "Human-readable layer name; defaults to the surface ref."
+     },
+     "layer_id": {
+      "type": "string",
+      "description": "Stable layer id; re-adding an id replaces the layer."
+     }
+    },
+    "required": [
+     "ref",
+     "vertical_datum",
+     "vertical_units",
+     "vertical_epoch"
+    ]
+   }
+  },
+  {
+   "name": "todo_write",
+   "description": "Record and update a structured task list for the current work. Send the ENTIRE list every call — it REPLACES the previous list (there are no partial updates, no per-item edits). Use it to plan multi-step work and show progress: add one todo per concrete step before you start. Mark every todo being actively worked on `in_progress` — several at once when work genuinely runs in parallel (e.g. concurrent subagents or background commands), one for sequential work; while work remains, at least one task should be `in_progress`. Mark a todo `completed` the moment it is done (do not batch completions), and allow no `in_progress` item only once all work is complete. Skip the list for trivial single-step tasks. Statuses: `pending` (not started), `in_progress` (being worked on now), `completed` (finished).",
+   "parameters": {
+    "type": "object",
+    "properties": {
+     "todos": {
+      "type": "array",
+      "description": "The COMPLETE task list, replacing any previous list.",
+      "items": {
+       "type": "object",
+       "additionalProperties": false,
+       "properties": {
+        "content": {
+         "type": "string",
+         "description": "What the task is — a short imperative line."
+        },
+        "status": {
+         "type": "string",
+         "description": "pending (not started) | in_progress (now) | completed (done).",
+         "enum": [
+          "pending",
+          "in_progress",
+          "completed"
+         ]
+        }
+       },
+       "required": [
+        "content",
+        "status"
+       ]
+      }
+     }
+    },
+    "required": [
+     "todos"
+    ]
+   }
+  },
+  {
+   "name": "update_goal",
+   "description": "Update the exact current goal revision. edit, pause, and resume require a direct top-level human request. During an automatic continuation of the current goal, complete and blocked are also allowed. blocked is rejected before the configured minimum round count; the model remains responsible for judging that the same condition persisted across those rounds and must explain it in blocked_reason.",
+   "parameters": {
+    "type": "object",
+    "properties": {
+     "goal_id": {
+      "type": "string",
+      "description": "Exact id returned by get_goal."
+     },
+     "revision": {
+      "type": "number",
+      "description": "Exact positive revision returned by get_goal."
+     },
+     "action": {
+      "type": "string",
+      "description": "edit | pause | resume | complete | blocked",
+      "enum": [
+       "edit",
+       "pause",
+       "resume",
+       "complete",
+       "blocked"
+      ]
+     },
+     "objective": {
+      "type": "string",
+      "description": "Replacement objective; valid only with action edit."
+     },
+     "max_goal_rounds": {
+      "type": "number",
+      "description": "Replacement cap; valid only with action edit."
+     },
+     "blocked_reason": {
+      "type": "string",
+      "description": "Concrete blocking condition; required only with action blocked."
+     }
+    },
+    "required": [
+     "goal_id",
+     "revision",
+     "action"
+    ]
+   }
+  },
+  {
+   "name": "viz_classify",
+   "description": "Classify one loaded map layer by a numeric field: breaks are computed from the layer's own rendered data (never invented), the legend derives from the same style version, and the map change folds through the standard commit protocol. Rates/densities classify the ratio over a denominator field. Optional time binding gives the layer a workbench timeline. Manual breaks require the exact statistic ref they came from.",
+   "parameters": {
+    "type": "object",
+    "properties": {
+     "layer_id": {
+      "type": "string",
+      "description": "The layer id to restyle (map_get_state lists them)."
+     },
+     "field": {
+      "type": "string",
+      "description": "Numeric property to classify."
+     },
+     "unit": {
+      "type": "string",
+      "description": "Unit the legend labels."
+     },
+     "measure": {
+      "type": "string",
+      "description": "total (default), rate, or density."
+     },
+     "series_identity": {
+      "type": "string",
+      "description": "observed (default), forecast, or scenario — the identity the legend declares."
+     },
+     "denominator_field": {
+      "type": "string",
+      "description": "Positive denominator property; required for rate/density."
+     },
+     "classification": {
+      "type": "string",
+      "description": "quantile (default), equal-interval, or manual."
+     },
+     "class_count": {
+      "type": "number",
+      "description": "Classes in [2, 12]; 5 is the recorded default."
+     },
+     "breaks": {
+      "type": "array",
+      "description": "Manual breaks (with classification=manual); strictly increasing numbers.",
+      "items": {
+       "type": "number"
+      }
+     },
+     "breaks_source_ref": {
+      "type": "string",
+      "description": "Exact statistic ref the manual breaks came from; required for manual."
+     },
+     "encoding": {
+      "type": "string",
+      "description": "fill (default) or size — size point encoding needs measure=total."
+     },
+     "time_field": {
+      "type": "string",
+      "description": "With timezone/time_from/time_to: enables the layer timeline."
+     },
+     "timezone": {
+      "type": "string",
+      "description": "IANA zone the timeline renders in."
+     },
+     "granularity": {
+      "type": "string",
+      "description": "hour, day (default), week, or month."
+     },
+     "time_from": {
+      "type": "string",
+      "description": "Half-open timeline window start, ISO."
+     },
+     "time_to": {
+      "type": "string",
+      "description": "Half-open timeline window end, exclusive."
+     }
+    },
+    "required": [
+     "layer_id",
+     "field",
+     "unit"
+    ]
+   }
+  },
+  {
+   "name": "viz_compare",
+   "description": "Compare two loaded layers on one unified classification domain: breaks are computed from the union of both layers' values, and both legends share them, so colors are directly comparable. Per-layer re-classification of a shared ramp is exactly what this refuses. Emits one map change restyling both layers.",
+   "parameters": {
+    "type": "object",
+    "properties": {
+     "layer_a": {
+      "type": "string",
+      "description": "First layer id."
+     },
+     "layer_b": {
+      "type": "string",
+      "description": "Second layer id; must differ from layer_a."
+     },
+     "field": {
+      "type": "string",
+      "description": "Numeric property to classify on both layers."
+     },
+     "unit": {
+      "type": "string",
+      "description": "Shared unit the legends label."
+     },
+     "measure": {
+      "type": "string",
+      "description": "total (default), rate, or density."
+     },
+     "series_identity": {
+      "type": "string",
+      "description": "observed (default), forecast, or scenario — the identity both legends declare."
+     },
+     "denominator_field": {
+      "type": "string",
+      "description": "Shared positive denominator property; required for rate/density."
+     },
+     "classification": {
+      "type": "string",
+      "description": "quantile (default) or equal-interval; manual has no unified-domain semantics."
+     },
+     "class_count": {
+      "type": "number",
+      "description": "Classes in [2, 12]; 5 is the recorded default."
+     },
+     "encoding": {
+      "type": "string",
+      "description": "fill (default) or size — size point encoding needs measure=total."
+     },
+     "time_field": {
+      "type": "string",
+      "description": "With timezone/time_from/time_to: shared timeline binding for both layers."
+     },
+     "timezone": {
+      "type": "string",
+      "description": "IANA zone the timeline renders in."
+     },
+     "granularity": {
+      "type": "string",
+      "description": "hour, day (default), week, or month."
+     },
+     "time_from": {
+      "type": "string",
+      "description": "Half-open timeline window start, ISO."
+     },
+     "time_to": {
+      "type": "string",
+      "description": "Half-open timeline window end, exclusive."
+     }
+    },
+    "required": [
+     "layer_a",
+     "layer_b",
+     "field",
+     "unit"
+    ]
+   }
+  },
+  {
+   "name": "viz_aggregate",
+   "description": "Aggregate one registered resource version into a deterministic lon/lat grid and add it as a bounded display layer: per-cell count, or sum over one numeric field, classified honestly for the legend. The layer declares its display-aggregate identity (source ref, cell size, measure) — it is for seeing distribution, never for analysis math. Oversized resources stream feature by feature; identical inputs produce identical layers.",
+   "parameters": {
+    "type": "object",
+    "properties": {
+     "resource_ref": {
+      "type": "string",
+      "description": "Exact resource ref (res-…@vN) to aggregate."
+     },
+     "layer_id": {
+      "type": "string",
+      "description": "The aggregate layer id to add (map_get_state lists taken ids)."
+     },
+     "layer_name": {
+      "type": "string",
+      "description": "Display name; defaults to the layer id."
+     },
+     "cell_size": {
+      "type": "number",
+      "description": "Grid cell edge in degrees (positive, e.g. 0.5 or 0.05)."
+     },
+     "measure": {
+      "type": "string",
+      "description": "count (default) or sum — sum needs value_field."
+     },
+     "value_field": {
+      "type": "string",
+      "description": "Numeric property summed per cell (required for measure=sum)."
+     },
+     "unit": {
+      "type": "string",
+      "description": "Unit the legend labels for the cell measure."
+     },
+     "max_cells": {
+      "type": "number",
+      "description": "Cell cap in [1, 20000]; 20000 is the recorded limit. Coarser grid on refusal."
+     }
+    }
+   }
+  },
+  {
+   "name": "viz_create_style",
+   "description": "Compute a classification style (StyleSpec + LegendSpec) from one registered resource version: quantile or equal-interval breaks computed from the actual field values, or manual breaks that must cite the exact statistic ref they came from. Rates and densities classify the ratio over a denominator field. Publishes the style record as an artifact viz_classify can cite, and reports the real breaks, class counts, and missing counts — never invented ranges.",
+   "parameters": {
+    "type": "object",
+    "properties": {
+     "resource_ref": {
+      "type": "string",
+      "description": "Exact resource ref (res-…@vN) the values classify from."
+     },
+     "field": {
+      "type": "string",
+      "description": "Numeric property to classify."
+     },
+     "unit": {
+      "type": "string",
+      "description": "Unit the legend labels."
+     },
+     "measure": {
+      "type": "string",
+      "description": "total (default), rate, or density — rates/densities classify the ratio over denominator_field."
+     },
+     "series_identity": {
+      "type": "string",
+      "description": "observed (default), forecast, or scenario — the identity the legend declares so a forecast layer is never mistaken for an observed one."
+     },
+     "denominator_field": {
+      "type": "string",
+      "description": "Positive denominator property; required for rate/density, forbidden for total."
+     },
+     "classification": {
+      "type": "string",
+      "description": "quantile (default), equal-interval, or manual."
+     },
+     "class_count": {
+      "type": "number",
+      "description": "Classes in [2, 12]; 5 is the recorded default. Tied data collapses honestly to fewer."
+     },
+     "breaks": {
+      "type": "array",
+      "description": "Manual class boundaries (with classification=manual); strictly increasing numbers.",
+      "items": {
+       "type": "number"
+      }
+     },
+     "breaks_source_ref": {
+      "type": "string",
+      "description": "Exact res-…@vN / art-…@vN the manual breaks came from; required for manual."
+     },
+     "encoding": {
+      "type": "string",
+      "description": "fill (default) or size — size point encoding needs measure=total."
+     },
+     "time_field": {
+      "type": "string",
+      "description": "With timezone/time_from/time_to: the temporal binding the workbench timeline uses."
+     },
+     "timezone": {
+      "type": "string",
+      "description": "IANA zone the timeline renders in (with time_field)."
+     },
+     "granularity": {
+      "type": "string",
+      "description": "hour, day (default), week, or month (with time_field)."
+     },
+     "time_from": {
+      "type": "string",
+      "description": "Half-open timeline window start, ISO (with time_field)."
+     },
+     "time_to": {
+      "type": "string",
+      "description": "Half-open timeline window end, exclusive (with time_field)."
+     }
+    },
+    "required": [
+     "resource_ref",
+     "field",
+     "unit"
+    ]
+   }
+  },
+  {
+   "name": "web_fetch",
+   "description": "Fetch the content of a specific HTTP(S) URL and return it decoded to text.",
+   "parameters": {
+    "type": "object",
+    "properties": {
+     "url": {
+      "type": "string",
+      "description": "The HTTP(S) URL to fetch."
+     }
+    },
+    "required": [
+     "url"
+    ]
+   }
+  },
+  {
+   "name": "web_search",
+   "description": "Search the web for current information. Provide 1–4 queries in the required queries array. Returns an optional summary answer and a list of source URLs.",
+   "parameters": {
+    "type": "object",
+    "properties": {
+     "queries": {
+      "type": "array",
+      "description": "Required search queries; accepts 1–4 items and merges their results.",
+      "items": {
+       "type": "string"
+      }
+     }
+    },
+    "required": [
+     "queries"
+    ]
+   }
+  },
+  {
+   "name": "workflow",
+   "description": "Run a JavaScript workflow script that orchestrates subagents at scale. Use this for work that fans out across many independent pieces — an audit over many files, a migration, multi-angle research, adversarial verification of findings — where you write the orchestration as a script instead of delegating turn by turn.\n\nThe workflow's identity rides the `meta` parameter as JSON: required `name` (short kebab-case) and `description` strings, optional `whenToUse` string and `phases` array (`{title, detail?, provider?, model?}`). The `script` parameter is the plain JavaScript body ONLY (NOT TypeScript, and NO `export const meta` statement — meta is a parameter, not code), running with top-level await; end with `return <value>` — the value must be JSON-serializable and is this tool's result.\n\nScript-body hooks:\n- `agent(prompt, opts?): Promise<any>` — run one subagent to completion. Without `opts.schema` it resolves to the child's final text; with `opts.schema` (an object-rooted JSON Schema using ONLY type/properties/required/additionalProperties/items/enum/const/oneOf — no pattern/format/numeric bounds) it resolves to the validated object. Resolves `null` when the child fails (filter with `.filter(Boolean)`). Other opts: `label` (display), `phase` (progress group), and independent `provider`/`model` LLM target overrides (either may be provided alone). Anything else (`effort`/`isolation`/`agentType`) is rejected loudly.\n- `pipeline(items, ...stages): Promise<any[]>` — run each item through the stages independently with NO barrier between stages (prefer this for multi-stage work). Each stage receives `(prev, item, index)`. An ordinary stage throw drops that ITEM to `null` and skips its remaining stages.\n- `parallel(thunks): Promise<any[]>` — run zero-argument functions concurrently and await ALL of them (a barrier; use only when a stage genuinely needs every prior result together). A throwing thunk resolves to `null`.\n- `phase(title)` — start a progress phase; `log(message)` — narrate progress; `args` — the tool call's `args` input, verbatim.\n\nMisused hooks (bad arguments, unknown options, unsupported schemas, tripped caps) throw errors that ALWAYS kill the script — they never dissolve into a per-item `null`.\n\nConstraints: concurrency and total-agent caps apply; no filesystem, network, timers, or Node.js APIs are provided — the agents do the work, the script only coordinates them. The run executes in the foreground: this call returns when the whole script finishes.",
+   "parameters": {
+    "type": "object",
+    "properties": {
+     "script": {
+      "type": "string",
+      "description": "The plain-JS workflow script body (top-level await allowed; NO `export const meta` statement; end with `return <json-value>`)."
+     },
+     "meta": {
+      "type": "object",
+      "description": "The workflow identity block (plain JSON — never code).",
+      "additionalProperties": true,
+      "properties": {
+       "name": {
+        "type": "string",
+        "description": "Short kebab-case workflow name."
+       },
+       "description": {
+        "type": "string",
+        "description": "One-line description of what the workflow does."
+       },
+       "whenToUse": {
+        "type": "string",
+        "description": "Optional guidance on when this workflow applies."
+       },
+       "phases": {
+        "type": "array",
+        "description": "Optional phase declarations matched by phase() calls.",
+        "items": {
+         "type": "object",
+         "additionalProperties": true,
+         "properties": {
+          "title": {
+           "type": "string",
+           "description": "The phase title phase() calls match by exact string."
+          },
+          "detail": {
+           "type": "string",
+           "description": "Optional one-line description of the phase."
+          },
+          "provider": {
+           "type": "string",
+           "description": "Optional provider override this phase is expected to use."
+          },
+          "model": {
+           "type": "string",
+           "description": "Optional model override this phase is expected to use."
+          }
+         },
+         "required": [
+          "title"
+         ]
+        }
+       }
+      },
+      "required": [
+       "name",
+       "description"
+      ]
+     },
+     "args": {
+      "type": "object",
+      "description": "Optional JSON input exposed to the script as the `args` global (wrap a bare list as a field, e.g. {\"files\": [...]}).",
+      "additionalProperties": true
+     }
+    },
+    "required": [
+     "script",
+     "meta"
+    ]
+   }
+  },
+  {
+   "name": "write",
+   "description": "Create or fully replace a UTF-8 text file.",
+   "parameters": {
+    "type": "object",
+    "properties": {
+     "file_path": {
+      "type": "string",
+      "description": "Path to write, resolved by the filesystem backend."
+     },
+     "content": {
+      "type": "string",
+      "description": "Full UTF-8 text content to write."
+     },
+     "sandbox_permissions": {
+      "type": "string",
+      "description": "The wider sandbox mode this file operation needs. Only valid as a one-shot retry of an operation the sandbox just denied; requires justification and user approval.",
+      "enum": [
+       "workspace-write",
+       "danger-full-access"
+      ]
+     },
+     "justification": {
+      "type": "string",
+      "description": "Required with sandbox_permissions: one sentence for the user explaining why this exact file operation needs the wider access."
+     }
+    },
+    "required": [
+     "file_path",
+     "content"
+    ]
+   }
+  }
+ ],
+ "changes": []
+}

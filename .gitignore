@@ -1,0 +1,32 @@
+# Dependencies
+node_modules/
+
+# Build outputs
+lib/
+dist/
+.dsh-build/
+*.tsbuildinfo
+
+# Test / coverage
+coverage/
+.nyc_output/
+
+# Runtime state (harness home, sessions, caches) — anchored so fixture
+# trees such as snapshots/**/workspace/.dsh/ stay trackable
+/.dsh/
+/.mapharness/
+*.log
+
+# OS noise
+.DS_Store
+
+# Local env and signing material (parity with upstream tag)
+.env
+.env.local
+.env.*.local
+CLAUDE.local.md
+apps/desktop/.env.windows
+apps/desktop/.env.macos
+apps/desktop/*.p12
+.storages/
+.sessions/

@@ -1,0 +1,15 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "geometry": { "type": "Point", "coordinates": [116.397, 39.909] },
+      "properties": { "name": "fountain" }
+    },
+    {
+      "type": "Feature",
+      "geometry": { "type": "Point", "coordinates": [116.404, 39.915] },
+      "properties": { "name": "playground" }
+    }
+  ]
+}

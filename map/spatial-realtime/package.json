@@ -1,0 +1,27 @@
+{
+  "name": "@map-harness/spatial-realtime",
+  "description": "Realtime spatial stream contracts: the versioned `spatial-realtime@1` StreamSpec binding event time / ingest time / process time, event-id deduplication, watermarks and tumbling windows with bounded late-event revisions, a controlled pull-based scenario source with disconnect/reconnect and intake backpressure, and checkpoint/resume with immutable materialized window revisions. A pure library the stream tools consume — no host row.",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "lib/index.js",
+  "types": "lib/types/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./lib/types/index.d.ts",
+      "default": "./lib/index.js"
+    },
+    "./src/*": "./src/*",
+    "./package.json": "./package.json"
+  },
+  "scripts": {
+    "build": "tsc -b tsconfig.json && tsdown",
+    "test": "node --test --experimental-strip-types tests/*.spec.mjs",
+    "watch": "tsdown --watch"
+  },
+  "files": [
+    "lib/index.js",
+    "lib/types/**/*.d.ts"
+  ],
+  "license": "AGPL-3.0-only"
+}

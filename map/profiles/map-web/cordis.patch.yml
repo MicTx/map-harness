@@ -1,0 +1,111 @@
+# The map-web bundle patch: the map harness layer over dsh-web-app.
+# The profile stacks it after the dsh-web-app bundle, so rows here override
+# web-app rows by id. This patch carries the map capability surface: the
+# brand row takeover, map container, and internal ArcGIS MCP provider.
+#
+# The decisionFrame projection (P0c spatial context) joins the same
+# host-plane registry; its pre-step listener mounts through the preset plane.
+#
+# The model-facing map tools are registered by the host `map-tools` row below;
+# the map-analyst preset contributes persona and context-loop rows through the
+# user preset root. The map profile has one analyst capability scope, so the
+# host registry and provider share the same composed tool set.
+
+# ── tool presentation (native-only first phase) ─────────────────────────────
+#
+# The map surface ships Native tool presentation only: `ptc`/`both` collapse
+# the model toolset onto `run_code`, and the map container tools and the
+# internal ArcGIS MCP dispatch are validated exclusively against the native
+# schema path (nested PTC dispatch drops the presentationMeta the map
+# projection consumes). Pinning `mode: native` here replaces the web-app
+# row's `DSH_TOOLS_MODE` env reference wholesale, so an inherited
+# `DSH_TOOLS_MODE=ptc|both` cannot silently flip the map profile into an
+# unvalidated presentation.
+
+- id: tools
+  config:
+    mode: native
+
+# The map surface is authored around the map analyst preset. Upstream 0.2
+# hides the preset chip unless developer tools are enabled, so the profile
+# selects the preset as the blank-session default and keeps the product flow
+# usable in the normal Web surface.
+- id: agent-preset-registry
+  config:
+    default: map-analyst
+
+# The web-app bundle also ships four non-analyst preset declarations
+# (`standard`, `ptc`, `minimal`, `cordis`), all selectable beside `map-analyst`.
+# Three of them compose with the map surface: their rows mount inside the
+# preset scope and inherit the pinned native presentation. The `ptc` preset
+# is disabled here because its `tool-presentation` row declares `mode: ptc`
+# for its own scope, which shadows the deployment pin above — selecting it
+# would flip that session's model toolset onto the `run_code` collapse, the
+# unvalidated presentation the native pin exists to prevent.
+- id: preset-ptc
+  disabled: true
+
+# ── brand (from the brand-fork task package) ────────────────────────────────
+
+- id: ui-brand-official
+  disabled: true
+
+# ── right Sidebar focus (from the rightbar-map-only and preview-restore
+# task packages) ─────────────────────────────────────────────────────────────
+#
+# The map profile keeps the right Sidebar focused on the map tab (default
+# open) while retaining workspace file and document preview: only terminal
+# and web browser tabs never register.
+
+- id: ui-sidebar-terminal
+  disabled: true
+
+- id: ui-sidebar-browser
+  disabled: true
+
+# ── map container: node service + browser tab (host-plane service) ─────────
+#
+# `map` is a host-plane service: the tools resolve it from the agent context
+# and the browser half reads its state through the boot mirror, so ONE
+# process-wide registry serves every session (session ids key the state).
+
+- insert:
+    - id: map-client-ui-brand
+      name: '@map-harness/client-ui-brand'
+    - id: map-container
+      name: '@map-harness/map-container'
+    - id: arcgis-mcp
+      name: '@map-harness/arcgis-mcp'
+    - id: map-tools
+      name: '@map-harness/map-tools'
+    - id: spatial-catalog
+      name: '@map-harness/spatial-catalog'
+      config:
+        root: !!js dshHomePath('spatial-store')
+    - id: spatial-context
+      name: '@map-harness/spatial-context'
+    - id: spatial-accessibility
+      name: '@map-harness/spatial-accessibility'
+      config:
+        root: !!js dshHomePath('accessibility-store')
+    - id: spatial-collab
+      name: '@map-harness/spatial-collab'
+    # External data connections at connection capability only. No default
+    # config: deployments declare named connections (postgis / objectStores /
+    # cogs) with environment-referenced credentials; an empty declaration
+    # composes an empty registry and no credential requirement.
+    - id: spatial-connect
+      name: '@map-harness/spatial-connect'
+    # Remote MCP transport client plane at connection capability. No default
+    # config: deployments declare named connections (stdio / http) with
+    # environment-referenced credentials; an empty declaration composes an
+    # empty registry and no credential requirement.
+    - id: mcp-transport
+      name: '@map-harness/mcp-transport'
+    # Real stream source access and multi-source fusion. No default config:
+    # deployments declare sources (sse / completions) and fusions with
+    # by-name cc-switch credential references resolved at execution rounds;
+    # an empty declaration composes empty registries and no credential
+    # requirement.
+    - id: stream-providers
+      name: '@map-harness/stream-providers'

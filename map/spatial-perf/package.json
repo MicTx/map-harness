@@ -1,0 +1,31 @@
+{
+  "name": "@map-harness/spatial-perf",
+  "description": "Spatial performance capacity and benchmark gates: the versioned `spatial-perf@2` contract freezes seeded workloads and pinned digests, measures a map-independent compute-mix calibration probe, evaluates three same-run throughput ratios plus seven absolute gates, and retains historical absolute throughput as advisory trend data. The package also enforces bounded labels and cumulative pre-commit budgets, with stable reports and diagnostic baseline comparison. A pure library consumed by its own gate lane and diagnostic command — no host row.",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "lib/index.js",
+  "types": "lib/types/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./lib/types/index.d.ts",
+      "default": "./lib/index.js"
+    },
+    "./src/*": "./src/*",
+    "./package.json": "./package.json"
+  },
+  "scripts": {
+    "build": "tsc -b tsconfig.json && tsdown",
+    "test": "node --test --experimental-strip-types tests/*.spec.mjs",
+    "watch": "tsdown --watch",
+    "bench": "node --experimental-strip-types bin/perf-bench.mjs"
+  },
+  "dependencies": {
+    "@turf/turf": "^7.1.0"
+  },
+  "files": [
+    "lib/index.js",
+    "lib/types/**/*.d.ts"
+  ],
+  "license": "AGPL-3.0-only"
+}

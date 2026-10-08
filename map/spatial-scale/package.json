@@ -1,0 +1,27 @@
+{
+  "name": "@map-harness/spatial-scale",
+  "description": "Distributed-scale spatial data channel: the versioned `spatial-scale@1` contract binding an immutable chunked object provider (GeoParquet-style row-group chunks with per-chunk digests, range/tile/query reads), the resource budgets that keep every read and scan bounded, the worker-process plane with backpressure, cancel-to-quiescence, retry, and staged artifact publication, the scan record rebuilt from session-cited parts, and the fixed-workload benchmark with measured latency/memory/scan/concurrency/recovery thresholds. A pure library the scale tools consume — no host row.",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "lib/index.js",
+  "types": "lib/types/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./lib/types/index.d.ts",
+      "default": "./lib/index.js"
+    },
+    "./src/*": "./src/*",
+    "./package.json": "./package.json"
+  },
+  "scripts": {
+    "build": "tsc -b tsconfig.json && tsdown",
+    "test": "node --test --experimental-strip-types tests/*.spec.mjs",
+    "watch": "tsdown --watch"
+  },
+  "files": [
+    "lib/index.js",
+    "lib/types/**/*.d.ts"
+  ],
+  "license": "AGPL-3.0-only"
+}

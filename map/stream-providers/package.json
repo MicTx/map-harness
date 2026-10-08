@@ -1,0 +1,37 @@
+{
+  "name": "@map-harness/stream-providers",
+  "description": "Real stream source access for the realtime workbench: the versioned `stream-providers@1` contract binding two real source families (a standard SSE endpoint and an OpenAI-compatible streaming completions relay), by-name cc-switch credential resolution, bounded read rounds with parked in-flight reads, and deterministic multi-source fusion behind one fused event-time horizon. A pure library the service face consumes — no host row.",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "lib/index.js",
+  "types": "lib/types/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./lib/types/index.d.ts",
+      "default": "./lib/index.js"
+    },
+    "./src/*": "./src/*",
+    "./package.json": "./package.json"
+  },
+  "scripts": {
+    "build": "tsc -b tsconfig.json && tsdown",
+    "test": "node --test --experimental-strip-types tests/*.spec.mjs",
+    "watch": "tsdown --watch"
+  },
+  "dependencies": {
+    "@map-harness/spatial-realtime": "workspace:^"
+  },
+  "files": [
+    "lib/index.js",
+    "lib/types/**/*.d.ts"
+  ],
+  "license": "AGPL-3.0-only",
+  "devDependencies": {
+    "@deepseek-ai/cordis": "workspace:~",
+    "@deepseek-ai/schemastery": "workspace:~"
+  },
+  "peerDependencies": {
+    "@deepseek-ai/cordis": "workspace:~"
+  }
+}

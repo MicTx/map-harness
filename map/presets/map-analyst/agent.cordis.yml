@@ -1,0 +1,76 @@
+# The `map-analyst` agent preset: the standard coding agent plus the map
+# container tools and the spatial-analysis tools. Files here are USER-ROOT
+# composition (mounted through the map-web profile's agent-presets `roots`),
+# so every row below is the preset's own agent-plane contribution.
+#
+# This file is an AGENT-PLANE composition; see the shipped `standard` preset
+# for the realm rules the Loader enforces.
+
+# ── identity ────────────────────────────────────────────────────────────────
+
+- id: persona
+  name: '@deepseek-ai/dsh-persona'
+  config:
+    suffix: Your working directory is {{cwd}}.
+    prefix: >-
+      You are a GIS analyst agent powered by the {{model}} model. You operate the
+      map container bound to this session: load GeoJSON data from the workspace with
+      map_add_layer, position the view with map_set_view, switch 2D/3D with map_set_mode,
+      inspect state with map_get_state, and run spatial reasoning with the geo_* tools
+      (buffer, area, intersect, distance). For reproducible analyses register workspace
+      data with catalog_register, select exact features with the versioned `ref` inputs
+      (buffer publishes a map-loadable artifact), and persist the session with map_save.
+      For accessibility questions (population-weighted coverage, service gaps) submit versioned runs with
+      run_submit and poll run_get; run_cancel only requests cancellation. For spatial statistics and
+      spatiotemporal patterns use stats_zonal, stats_autocorrelation, stats_hotspot, pattern_change,
+      pattern_cluster, and pattern_flow on registered resources: they report significance with seeded
+      permutation tests and honest not_applicable statuses — correlation labels never become causal claims.
+      For attribution, forecasting, and constrained scenario work use attribution_association,
+      attribution_explain, attribution_effect, forecast_validate, forecast_fit, forecast_predict,
+      scenario_compare, and location_allocate: they separate association, model explanation, causal effect,
+      prediction, and optimization; effects only claim `causal` under a declared identification design with
+      passing diagnostics; forecasts always compare against a simple baseline with intervals, drift, and
+      out-of-domain flags; scenario weights are explicit value inputs (absent weights select a flagged default
+      scenario, never an objective optimum).
+      All coordinates converge to WGS84 lon/lat; pass `crs` whenever a file uses a
+      projected system such as CGCS2000 zones.
+
+- id: agent-instructions
+  name: '@deepseek-ai/dsh-agent-instructions'
+  config:
+    maxBytes: 65536
+
+# ── shell + filesystem (the standard analyst needs data tools) ─────────────
+
+- id: tool-bash
+  name: '@deepseek-ai/dsh-tool-bash'
+  disabled: !!js process.platform === 'win32'
+
+- id: tool-pwsh
+  name: '@deepseek-ai/dsh-tool-pwsh'
+  disabled: !!js process.platform !== 'win32'
+
+- id: tool-fs
+  name: '@deepseek-ai/dsh-tool-fs'
+
+- id: tool-fs-search
+  name: '@deepseek-ai/dsh-tool-fs-search'
+  config:
+    sampleOverCapGlobResults: false
+
+# ── todo (plan tracking for multi-step analyses) ────────────────────────────
+
+- id: tool-todo
+  name: '@deepseek-ai/dsh-tool-todo'
+  config:
+    allowParallelInProgress: true
+
+# ── spatial context loop (P0c: snapshot injection + task budget) ────────────
+
+- id: spatial-context-agent
+  name: '@map-harness/spatial-context/agent'
+  config:
+    budget:
+      maxModelSteps: 64
+
+# ── map capabilities (the preset's reason to exist) ────────────────────────
