@@ -1,0 +1,19 @@
+version: 1
+scenario: map-layer-styles
+profile: headless
+composition: map-layer-styles
+recording: live
+header:
+  class: map-layer-styles
+  pin: true
+input:
+  task: >-
+    Create two synthetic point layers on the session map with map_draw: layer_id
+    clinics with the single coordinate [116.40, 39.90], and layer_id shelters
+    with the single coordinate [116.45, 39.94]. Then, in one call, batch-hide
+    the shelters layer and place it in the display group "shelters" with
+    layer_set_state. Restyle the clinics layer with the preset
+    marker-square-red-large, and give its feature f-1 a blue color (#1e88e5)
+    through the overrides of layer_set_style. End with exactly one line
+    reporting the map revision and the number of recorded operations. Do not
+    echo any layer ids in that final line.
