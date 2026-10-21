@@ -1,0 +1,8 @@
+{
+  "conversationViews": ["对话", "轨迹"],
+  "mapAction": "打开本会话地图",
+  "mapTabs": 1,
+  "mapCanvases": 1,
+  "mapEngines": 1,
+  "boundToConversation": true
+}

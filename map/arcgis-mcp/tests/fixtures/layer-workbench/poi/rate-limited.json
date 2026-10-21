@@ -1,0 +1,4 @@
+{
+  "httpStatus": 429,
+  "body": { "status": { "infocode": 1030 } }
+}

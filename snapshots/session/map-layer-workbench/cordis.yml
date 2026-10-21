@@ -1,0 +1,67 @@
+# Live-recording patch for the map-layer-workbench snapshot composition: the
+# shipped headless agent plus the map capability surface with the P1–P3 tool
+# families (data resourcing, layer presentation, exports). The online-search
+# leg runs against the process-local Tianditu fixture transport mounted at
+# the bottom, so recording never contacts a real vendor. Re-recording requires
+# a DeepSeek-compatible deployment exposing deepseek-chat; keyless replay uses
+# the sibling patch and never contacts that deployment.
+
+- id: llm-deepseek
+  name: '@deepseek-ai/dsh-llm-deepseek-api-key'
+  config:
+    thinking: enabled
+    reasoningEffort: high
+    models:
+      - id: deepseek-chat
+        name: DeepSeek Chat
+        contextWindow: 131072
+        maxTokens: 131072
+
+- id: tools
+  config:
+    mode: native
+
+- id: system-prompt
+  name: '@deepseek-ai/dsh-system-prompt'
+  config:
+    personaPrefix: >-
+      You are a GIS analyst agent powered by the {{model}} model. You operate the
+      map container bound to this session: import workspace CSV/KML/Shapefile
+      data with data_import (stop at needs_confirmation and resolve it), load
+      versioned resources with map_add_layer, restyle layers with
+      layer_set_style (symbol/preset/auto plus per-feature overrides), batch
+      visibility, opacity, and display groups with layer_set_state, read state
+      with map_get_state, export layers or the whole map with data_export, and
+      persist the session with map_save. Register workspace data or online
+      search results with catalog_register and resolve exact versions with
+      catalog_resolve. All coordinates converge to WGS84 lon/lat.
+
+- insert:
+    - id: map-container
+      name: '../../../map/map-container/lib/index.js'
+    - id: arcgis-mcp
+      name: '../../../map/arcgis-mcp/lib/index.js'
+    - id: spatial-catalog
+      name: '../../../map/spatial-catalog/lib/index.js'
+      config:
+        root: !!js dshHomePath('spatial-store')
+    - id: spatial-context
+      name: '../../../map/spatial-context/lib/index.js'
+    - id: spatial-context-agent
+      name: '../../../map/spatial-context/lib/agent.js'
+    - id: spatial-accessibility
+      name: '../../../map/spatial-accessibility/lib/index.js'
+      config:
+        root: !!js dshHomePath('accessibility-store')
+    - id: spatial-collab
+      name: '../../../map/spatial-collab/lib/index.js'
+    - id: spatial-connect
+      name: '../../../map/spatial-connect/lib/index.js'
+      config:
+        tianditu:
+          apiKeyEnv: LAYER_WORKBENCH_SEARCH_KEY
+          baseUrl: https://tianditu.layer-workbench.invalid
+    - id: tool-map-tools
+      name: '../../../map/tools/lib/index.js'
+    - id: layer-workbench-search-fixture
+      name: '../../../map/arcgis-mcp/tests/fixtures/layer-workbench/poi-fixture-plugin.mjs'
