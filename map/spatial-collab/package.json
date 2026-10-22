@@ -1,0 +1,38 @@
+{
+  "name": "@map-harness/spatial-collab",
+  "description": "Spatial collaboration contracts: the versioned writer/patch/conflict vocabulary (spatial-collab@1), the pure serial commit engine (expectedRevision check and acceptance in one synchronous segment), the explainable conflict diff, the compensating-undo target checks, and the writer lease lifecycle (join, disconnect, reconnect, release with in-flight quiescence, permission revoke). A pure library the collab tools and host service consume — no host row by itself.",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "lib/index.js",
+  "types": "lib/types/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./lib/types/index.d.ts",
+      "default": "./lib/index.js"
+    },
+    "./src/*": "./src/*",
+    "./package.json": "./package.json"
+  },
+  "scripts": {
+    "build": "tsc -b tsconfig.json && tsdown",
+    "test": "node --test --experimental-strip-types tests/*.spec.mjs",
+    "watch": "tsdown --watch"
+  },
+  "files": [
+    "lib/index.js",
+    "lib/types/**/*.d.ts"
+  ],
+  "license": "AGPL-3.0-only",
+  "peerDependencies": {
+    "@deepseek-ai/cordis": "workspace:~"
+  },
+  "dependencies": {
+    "@map-harness/spatial-catalog": "workspace:^"
+  },
+  "devDependencies": {
+    "@deepseek-ai/cordis": "workspace:~",
+    "@deepseek-ai/dsh-session": "workspace:*",
+    "zod": "^4.4.3"
+  }
+}

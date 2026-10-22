@@ -1,0 +1,27 @@
+{
+  "name": "@map-harness/spatial-viz",
+  "description": "Spatial visualization workbench contracts: the versioned StyleSpec/LegendSpec pair (classification breaks always computed from frozen data, manual breaks requiring an exact statistic source), the deterministic timezone-aware time-axis state machine, and the shared selection-filter/attribute/export vocabulary that keeps layer, legend, table, chart, and export on one style/data/time revision. A pure library the tools and the browser workbench consume — no host row.",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "lib/index.js",
+  "types": "lib/types/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./lib/types/index.d.ts",
+      "default": "./lib/index.js"
+    },
+    "./src/*": "./src/*",
+    "./package.json": "./package.json"
+  },
+  "scripts": {
+    "build": "tsc -b tsconfig.json && tsdown",
+    "test": "node --test --experimental-strip-types tests/*.spec.mjs",
+    "watch": "tsdown --watch"
+  },
+  "files": [
+    "lib/index.js",
+    "lib/types/**/*.d.ts"
+  ],
+  "license": "AGPL-3.0-only"
+}
