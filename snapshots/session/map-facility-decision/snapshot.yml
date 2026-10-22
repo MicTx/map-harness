@@ -1,0 +1,11 @@
+version: 1
+scenario: map-facility-decision
+profile: headless
+composition: map-facility-decision
+recording: live
+replay:
+  override: true
+header:
+  class: map-facility-decision
+  pin: true
+  toolSchemasSource: map-analyst-turn
