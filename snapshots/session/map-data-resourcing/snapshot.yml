@@ -1,0 +1,10 @@
+version: 1
+scenario: map-data-resourcing
+profile: headless
+composition: map-data-resourcing
+recording: live
+header:
+  class: map-data-resourcing
+  pin: true
+input:
+  task: Import hospitals.csv from the workspace as a versioned catalog resource with data_import, load it onto the map with map_add_layer, then export that layer as a shapefile artifact with data_export. End with exactly one line reporting the imported feature count and the exported artifact byte count. Do not echo any resource, artifact, or layer ids in that final line.
