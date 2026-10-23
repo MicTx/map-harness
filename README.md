@@ -1,0 +1,66 @@
+# Map Harness
+
+English | [中文](README.zh.md)
+
+Map Harness: an agent-harness derivative of [DeepSeek Harness](./README.upstream.md), adding a live map canvas and spatial-analysis tools for geographic tasks. That increment is Geospatial Visualized Reasoning: when a task is geographic — siting, coverage, overlap, distribution — the agent draws, inspects, and reasons on the map instead of working from plain text.
+
+Prebuilt runtime archives for Windows, macOS, and Linux are on the [latest release](https://github.com/MicTx/map-harness/releases/latest); installation steps are under Quick start.
+
+## Capabilities
+
+- **Online spatial search** — place names, POIs, reverse geocoding and administrative data via Tianditu, published as immutable versioned resources
+- **Natural-language map operations** — locate, move, fit-to-extent, 2D/3D, AOI; direct point/line/polygon drawing with undo
+- **Layer management** — naming, visibility, order, thematic styling, delete and compensated undo on stable layer ids and revisions
+- **Visual observation** — revision-bound map screenshots returned to the model, gated on vision-capable models
+- **Analysis methods** — buffer/area/intersect/union/difference, contours, kernel density, slope, nearest facility, coverage runs; nine versioned method cards guide discovery
+- **Bounded spatial context** — goal, viewport vs AOI, layer identity/visibility, resource versions/CRS, ledgered evidence and pending jobs, rebuilt across compaction/fork
+
+**Developer preview — there will be compatibility-breaking changes.** The harness can execute model-generated commands and access files, processes, and the network; read [SAFETY.md](SAFETY.md) before running it.
+
+<!-- Keep these anchors: docs/user/guide/index.md and docs/user/guide/providers.md link to #run; docs/user/develop/basic/{index,publish}.md link to #run-from-source. -->
+<a id="run"></a>
+
+<a id="run-from-source"></a>
+
+## Quick start
+
+Prebuilt release (Windows, macOS, Linux; nothing to compile): install Node.js `^22.19.0 || >=24.0.0`, download `map-harness-<version>-runtime.zip` (Windows) or `.tar.gz` from the [latest release](https://github.com/MicTx/map-harness/releases/latest), extract it, then run `install.cmd` and `start.cmd` (Windows) or `./install.sh` and `./start.sh` (macOS/Linux). The install script only downloads dependencies, picking the first reachable npm mirror (npmmirror, Tencent Cloud, npmjs); pass `--registry <url>` to choose one.
+
+From source: Node.js `^22.19.0 || >=24.0.0` and the pnpm version pinned in `package.json` `packageManager`. Linux and macOS builds also compile one small native addon, so a C compiler must be installed.
+```sh
+git clone https://github.com/MicTx/map-harness.git && cd map-harness
+pnpm install          # install workspace dependencies
+node map/bin/build-web.mjs   # clean, then build upstream, map packages, and the Web frontend (community edition)
+node map/bin/map-harness.mjs web    # start the map harness web UI (default profile: map-web)
+```
+The last command starts the Web UI at `http://127.0.0.1:3080` by default and opens it in the default browser; pass `--no-open` to skip opening. See the upstream [user guide](docs/user/guide/index.md) for what comes next. Equivalent shortcuts: `pnpm run start:web` and `make web` boot the same map-web profile (`pnpm run start:web -- --no-open --port 3081` forwards options).
+
+## Architecture
+
+Map Harness is a derivative: the [DeepSeek Harness](./README.upstream.md) (upstream, MIT) tree stays verbatim, and this project's additions live only in `map/`.
+
+```
+Upstream verbatim (apps/ vendor/ ...; exceptions registered in map/UPSTREAM.md)
+└── map/                      ← the only owned area of this repository
+    ├── tools/                ← map toolkit (model-facing map/geo spatial tools)
+    ├── client-ui-brand/      ← brand plugin, occupying the sidebar.brand.* official slot
+    ├── profiles/map-web/     ← map-web bundle (brand patch layer)
+    ├── bin/                  ← map-harness CLI wrapper and build scripts
+    ├── docs/                 ← map layer design records
+    ├── README.md             ← slot contract
+    └── UPSTREAM.md           ← upstream update process
+```
+
+Branding and map capabilities attach only through upstream extension slots (patch layers that replace or insert plugin rows by id); upstream files stay unchanged except the repo-owned facade files and integration patches registered in [map/UPSTREAM.md](./map/UPSTREAM.md). The complete slot contract and per-package attachment mechanisms live in [map/README.md](./map/README.md).
+
+## Upstream updates
+
+See [map/UPSTREAM.md](./map/UPSTREAM.md): new version import → zero-conflict check → reinstall → rebuild upstream and map layers → smoke test, never touching the `map/` layer.
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) and the [Code of Conduct](CODE_OF_CONDUCT.md); upstream community channels are listed in [README.upstream.md](./README.upstream.md). Benchmarks: see [BENCHMARK.md](BENCHMARK.md). Some documents link to maintainers' working notes that this repository does not publish; those links do not resolve.
+
+## License
+
+Map Harness is released under the [GNU Affero General Public License v3.0](./LICENSE). The vendored upstream [DeepSeek Harness](./README.upstream.md) code is Copyright (c) 2026 DeepSeek and remains under its MIT License, reproduced in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md), where third-party dependencies and their licenses are disclosed as well.

@@ -1,0 +1,12 @@
+version: 1
+scenario: map-lbs-denied
+profile: headless
+composition: map-lbs-denied
+recording: live
+replay:
+  override: true
+header:
+  class: map-lbs-denied
+  pin: true
+environment:
+  BAIDU_FIXTURE_KEY: fixture-only-not-a-credential
