@@ -1,0 +1,1 @@
+{"type":"FeatureCollection","features":[{"type":"Feature","id":"east","geometry":{"type":"Point","coordinates":[116.02,39.5]},"properties":{"capacity":1000,"cost":6}}]}
