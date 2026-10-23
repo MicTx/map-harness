@@ -1,0 +1,97 @@
+# Replay patch for the map-layer-workbench snapshot composition. The model
+# script comes from the scenario's committed session JSONL; the map capability
+# surface, the native tool presentation, the persona, the configured search
+# endpoint, and the process-local search fixture stay identical to the
+# live-recording patch so the replayed request headers match.
+
+- id: llm-deepseek
+  name: '@deepseek-ai/dsh-llm-deepseek-api-key'
+  disabled: true
+
+- id: plugin-package-inventory-deepseek
+  disabled: true
+
+- id: session-title-llm
+  disabled: true
+
+- id: session-persistence-jsonl
+  name: '@deepseek-ai/dsh-session-persistence-jsonl'
+  config:
+    root: !!js dshHomePath('sessions')
+    compression: none
+
+- id: sandbox
+  name: '@deepseek-ai/dsh-sandbox-local'
+  config:
+    runnerCommand:
+      - bash
+      - -c
+      - while [ "$1" != "--" ]; do shift; done; shift; exec "$@"
+      - passthrough-runner
+    runnerFailureSignatures:
+      - 'passthrough-runner: profile rejected'
+
+- id: tools
+  config:
+    mode: native
+
+- id: system-prompt
+  name: '@deepseek-ai/dsh-system-prompt'
+  config:
+    personaPrefix: >-
+      You are a GIS analyst agent powered by the {{model}} model. You operate the
+      map container bound to this session: import workspace CSV/KML/Shapefile
+      data with data_import (stop at needs_confirmation and resolve it), load
+      versioned resources with map_add_layer, restyle layers with
+      layer_set_style (symbol/preset/auto plus per-feature overrides), batch
+      visibility, opacity, and display groups with layer_set_state, read state
+      with map_get_state, export layers or the whole map with data_export, and
+      persist the session with map_save. Register workspace data or online
+      search results with catalog_register and resolve exact versions with
+      catalog_resolve. All coordinates converge to WGS84 lon/lat.
+
+- insert:
+    - id: map-container
+      name: '../../../map/map-container/lib/index.js'
+    - id: arcgis-mcp
+      name: '../../../map/arcgis-mcp/lib/index.js'
+    - id: spatial-catalog
+      name: '../../../map/spatial-catalog/lib/index.js'
+      config:
+        root: !!js dshHomePath('spatial-store')
+    - id: spatial-context
+      name: '../../../map/spatial-context/lib/index.js'
+    - id: spatial-context-agent
+      name: '../../../map/spatial-context/lib/agent.js'
+    - id: spatial-accessibility
+      name: '../../../map/spatial-accessibility/lib/index.js'
+      config:
+        root: !!js dshHomePath('accessibility-store')
+    - id: spatial-collab
+      name: '../../../map/spatial-collab/lib/index.js'
+    - id: spatial-connect
+      name: '../../../map/spatial-connect/lib/index.js'
+      config:
+        tianditu:
+          apiKeyEnv: LAYER_WORKBENCH_SEARCH_KEY
+          baseUrl: https://tianditu.layer-workbench.invalid
+    - id: tool-map-tools
+      name: '../../../map/tools/lib/index.js'
+    - id: layer-workbench-search-fixture
+      name: '../../../map/arcgis-mcp/tests/fixtures/layer-workbench/poi-fixture-plugin.mjs'
+
+- insert:
+    - id: llm-replay
+      name: '@deepseek-ai/dsh-llm-replay'
+      config:
+        providers:
+          - id: deepseek-official
+            name: DeepSeek
+            models:
+              # The catalog facts the live recording produced, so the replayed
+              # request header reconstructs the recorded adapterDefaults.
+              - id: deepseek-chat
+                contextWindow: 131072
+                defaultMaxTokens: 131072
+                reasoningEfforts: [off, low, high, max]
+                defaultReasoningEffort: high

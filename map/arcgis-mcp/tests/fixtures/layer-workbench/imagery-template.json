@@ -1,0 +1,4 @@
+{
+  "template": "https://tiles.layer-workbench.invalid/{z}/{y}/{x}",
+  "note": "key-free template intercepted by the composition lane via page.route; never fetched for real"
+}
