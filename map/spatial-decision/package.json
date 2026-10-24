@@ -1,0 +1,30 @@
+{
+  "name": "@map-harness/spatial-decision",
+  "description": "P3 spatial decision models: the versioned attribution (association/model-explanation/causal-effect), forecast (validation/fit/prediction with baselines, intervals, drift, and out-of-domain states), and constrained scenario optimization (comparison and allocation with capacity/cost/equity weights, infeasible candidates, and weight sensitivity) method contracts and computations. Attribution outputs never upgrade beyond their declared evidence conditions; forecasts always carry a simple baseline and a training cutoff; optimization never claims a global optimum.",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "lib/index.js",
+  "types": "lib/types/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./lib/types/index.d.ts",
+      "default": "./lib/index.js"
+    },
+    "./src/*": "./src/*",
+    "./package.json": "./package.json"
+  },
+  "scripts": {
+    "build": "tsc -b tsconfig.json && tsdown",
+    "test": "node --test --experimental-strip-types tests/*.spec.mjs",
+    "watch": "tsdown --watch"
+  },
+  "files": [
+    "lib/index.js",
+    "lib/types/**/*.d.ts"
+  ],
+  "dependencies": {
+    "@map-harness/spatial-statistics": "workspace:^"
+  },
+  "license": "AGPL-3.0-only"
+}

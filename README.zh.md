@@ -1,0 +1,67 @@
+# Map Harness
+
+[English](README.md) | 中文
+
+Map Harness：[DeepSeek Harness](./README.upstream.md) 的派生智能体框架，为地理任务追加实时地图画布与空间分析工具。这一增量即地理空间可视化推理（Geospatial Visualized Reasoning）：当任务本身是地理的——选址、覆盖、叠置、分布——智能体在地图上绘制、查看并推理，而不是面对纯文本。
+
+预编译运行包（Windows、macOS、Linux）见[最新发布](https://github.com/MicTx/map-harness/releases/latest)；安装步骤见下方「快速开始」。
+
+## 功能
+
+- **在线空间检索**——天地图地名/POI/逆地理/行政区，结果登记为不可变版本化资源
+- **自然语言地图操作**——定位、移动、适配范围、2D/3D、AOI；点线面直接绘制并可撤销
+- **图层管理**——命名、显隐、顺序、专题样式、删除与补偿撤销，稳定 layerId 与 revision
+- **视觉观察**——绑定 revision 的地图截图回传模型，仅视觉模型通过门控后提交
+- **分析方法**——缓冲/面积/相交/并差、等值线、核密度、坡度、最近设施、覆盖作业；九族版本化方法卡按需发现
+- **有界空间上下文**——目标、视窗与 AOI、图层身份/可见性、资源版本/CRS、证据与缺口，跨压缩/fork 重建
+
+**开发者预览——版本间会出现破坏性变更。** 本 harness 可执行模型生成的命令并访问文件、进程与网络；运行前请阅读[安全说明](SAFETY.zh.md)。
+
+<!-- 保留这些锚点：docs/user/guide/index.zh.md 与 docs/user/guide/providers.zh.md 链接到 #run；docs/user/develop/basic/{index,publish}.zh.md 链接到 #run-from-source。 -->
+<a id="run"></a>
+
+<a id="run-from-source"></a>
+
+## 快速开始
+
+预编译发布包（Windows、macOS、Linux，无需编译）：安装 Node.js `^22.19.0 || >=24.0.0`，从[最新 release](https://github.com/MicTx/map-harness/releases/latest) 下载 `map-harness-<version>-runtime.zip`（Windows）或 `.tar.gz`，解压后运行 `install.cmd` 与 `start.cmd`（Windows），或 `./install.sh` 与 `./start.sh`（macOS/Linux）。安装脚本只下载依赖，自动选用首个可达的 npm 镜像（npmmirror、腾讯云、npmjs）；可用 `--registry <url>` 指定。
+
+从源码构建：Node.js `^22.19.0 || >=24.0.0`，pnpm 版本以 `package.json` 的 `packageManager` 为准。Linux 与 macOS 构建还会编译一个小型原生插件，需先安装 C 编译器。
+```sh
+git clone https://github.com/MicTx/map-harness.git && cd map-harness
+pnpm install          # install workspace dependencies
+node map/bin/build-web.mjs   # clean, then build upstream, map packages, and the Web frontend (community edition)
+node map/bin/map-harness.mjs web    # start the map harness web UI (default profile: map-web)
+```
+最后一条命令默认在 `http://127.0.0.1:3080` 启动 Web UI 并打开默认浏览器；传入 `--no-open` 可跳过。后续见上游[用户指南](docs/user/guide/index.zh.md)。等价入口：`pnpm run start:web` 与 `make web` 启动同一 map-web 档案（`pnpm run start:web -- --no-open --port 3081` 透传参数）。
+
+
+## 架构
+
+Map Harness 是派生项目：[DeepSeek Harness](./README.upstream.md)（上游，MIT）的树保持原样，本项目的增量只放在 `map/` 层。
+
+```
+Upstream verbatim (apps/ vendor/ ...; exceptions registered in map/UPSTREAM.md)
+└── map/                      ← the only owned area of this repository
+    ├── tools/                ← map toolkit (model-facing map/geo spatial tools)
+    ├── client-ui-brand/      ← brand plugin, occupying the sidebar.brand.* official slot
+    ├── profiles/map-web/     ← map-web bundle (brand patch layer)
+    ├── bin/                  ← map-harness CLI wrapper and build scripts
+    ├── docs/                 ← map layer design records
+    ├── README.md             ← slot contract
+    └── UPSTREAM.md           ← upstream update process
+```
+
+品牌与地图能力仅通过上游扩展插槽（按 id 替换或插入插件行的 patch 层）挂载；上游文件保持原样，仅 [map/UPSTREAM.md](./map/UPSTREAM.md) 登记的自有门面文件与集成补丁例外。完整插槽契约与逐包接入机制见 [map/README.zh.md](./map/README.zh.md)。
+
+## 上游更新
+
+见 [map/UPSTREAM.md](./map/UPSTREAM.md)：新版本导入 → 零冲突检查 → 重装依赖 → 重建上游与 map 层 → 冒烟，全程不触碰 `map/` 层。
+
+## 贡献
+
+贡献方式见 [CONTRIBUTING.zh.md](CONTRIBUTING.zh.md)，行为准则见 [CODE_OF_CONDUCT.zh.md](CODE_OF_CONDUCT.zh.md)；上游社区频道见 [README.upstream.zh.md](./README.upstream.md)。基准测试见 [BENCHMARK.md](BENCHMARK.md)。 部分文档链接到维护者的内部工作记录，本仓库不发布这些记录，相应链接无法打开。
+
+## 许可证
+
+Map Harness 以 [GNU Affero General Public License v3.0](./LICENSE) 发布。内置的上游 [DeepSeek Harness](./README.upstream.md) 代码版权所有 (c) 2026 DeepSeek，仍遵循其 MIT License（全文收录于 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)，第三方依赖及其许可证也披露于该文件）。
