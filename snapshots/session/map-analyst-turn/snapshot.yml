@@ -1,0 +1,8 @@
+version: 1
+scenario: map-analyst-turn
+profile: headless
+composition: map-analyst
+recording: live
+header:
+  class: map-analyst
+  pin: true

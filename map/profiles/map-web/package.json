@@ -1,0 +1,28 @@
+{
+  "name": "@map-harness/map-web",
+  "description": "The map harness browser-surface bundle: the map brand patch layer over dsh-web-app",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./cordis.patch.yml": "./cordis.patch.yml",
+    "./package.json": "./package.json"
+  },
+  "license": "MIT",
+  "dsh": {
+    "bundle": {
+      "patch": [
+        "./cordis.patch.yml",
+        "./presets/map-analyst.patch.yml"
+      ]
+    }
+  },
+  "devDependencies": {
+    "@deepseek-ai/cordis": "workspace:^"
+  },
+  "peerDependencies": {
+    "@deepseek-ai/cordis": "workspace:^"
+  }
+}

@@ -1,0 +1,68 @@
+{
+  "patches": [
+    {
+      "at": 2,
+      "entry": {
+        "kind": "chunks",
+        "chunks": [
+          {
+            "type": "block-start",
+            "index": 0,
+            "blockType": "tool-call"
+          },
+          {
+            "type": "tool-call-delta",
+            "index": 0,
+            "id": "call_00_wY73QewQCKBsS7dBWDIx0519",
+            "name": "run_get",
+            "argumentsDelta": ""
+          },
+          {
+            "type": "tool-call-delta",
+            "index": 0,
+            "id": "call_00_wY73QewQCKBsS7dBWDIx0519",
+            "argumentsDelta": "{\"run_id\": \"{{fromRequest:\"run_id\":\"(run-[a-f0-9-]+)\"[^\\n]*?\"request_digest\":\"94bfd2972fffcb3fa23cb56f5e61242c1cd3155fc0fb5d5424d08bb9e422442a\"}}\"}"
+          },
+          {
+            "type": "block-end",
+            "index": 0,
+            "block": {
+              "type": "tool-call",
+              "id": "call_00_wY73QewQCKBsS7dBWDIx0519",
+              "name": "run_get",
+              "arguments": "{\"run_id\": \"{{fromRequest:\"run_id\":\"(run-[a-f0-9-]+)\"[^\\n]*?\"request_digest\":\"94bfd2972fffcb3fa23cb56f5e61242c1cd3155fc0fb5d5424d08bb9e422442a\"}}\"}"
+            }
+          },
+          {
+            "type": "usage",
+            "usage": {
+              "inputTokens": 471,
+              "outputTokens": 65,
+              "cacheReadTokens": 29184,
+              "cacheWriteTokens": 0,
+              "totalTokens": 29720
+            }
+          },
+          {
+            "type": "finish",
+            "reason": {
+              "kind": "tool-calls"
+            },
+            "replayState": {
+              "response": {
+                "kind": "deepseek-messages",
+                "version": 1,
+                "model": "deepseek-flash"
+              },
+              "blocks": [
+                {
+                  "type": "tool-call"
+                }
+              ]
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

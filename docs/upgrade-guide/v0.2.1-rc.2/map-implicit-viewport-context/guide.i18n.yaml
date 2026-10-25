@@ -1,0 +1,16 @@
+# Bilingual-pair consistency record for guide.md (docs/i18n/README.md): per heading
+# section, a hash of its English and Chinese blocks outside code blocks and generated regions.
+# After editing either side, bring the other along and re-record with:
+#   pnpm run verify-translation-pairing --write docs/upgrade-guide/v0.2.1-rc.2/map-implicit-viewport-context/guide.md
+/:
+  en: 2e9ab9a54e5d9c10
+  zh: 4c3dcb9c780dfcb8
+/the-map-viewport-becomes-implicit-model-context:
+  en: 6cdf8b847edbe058
+  zh: 99d5d29208af267d
+/the-map-viewport-becomes-implicit-model-context/change:
+  en: c4e1deb22a270963
+  zh: a6e5c3aac0149589
+/the-map-viewport-becomes-implicit-model-context/migration:
+  en: 1ae8c28de11095dc
+  zh: bc3f6b45b2e95f69

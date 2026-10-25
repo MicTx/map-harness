@@ -1,0 +1,16 @@
+# Bilingual-pair consistency record for guide.md (docs/i18n/README.md): per heading
+# section, a hash of its English and Chinese blocks outside code blocks and generated regions.
+# After editing either side, bring the other along and re-record with:
+#   pnpm run verify-translation-pairing --write docs/upgrade-guide/v0.2.0-rc.2/map-lbs-protocol/guide.md
+/:
+  en: a9801e4a88024ad6
+  zh: 3423bed248393390
+/map-lbs-coordinates-and-authorization:
+  en: a2fe656ef4f99de3
+  zh: 4400138d03782b64
+/map-lbs-coordinates-and-authorization/change:
+  en: 2c784a3a1ca75bee
+  zh: 865b1074cc3794c7
+/map-lbs-coordinates-and-authorization/migration:
+  en: c5fab3d96c15044c
+  zh: d622f82a7a597052

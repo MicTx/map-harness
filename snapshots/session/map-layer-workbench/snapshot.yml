@@ -1,0 +1,28 @@
+version: 1
+scenario: map-layer-workbench
+profile: headless
+composition: map-layer-workbench
+recording: live
+header:
+  class: map-layer-workbench
+  pin: true
+environment:
+  LAYER_WORKBENCH_SEARCH_KEY: fixture-only-not-a-credential
+input:
+  task: >-
+    Work through one map-maintenance request end to end. The workspace already
+    contains hospitals.csv; do not run shell commands or list directories.
+    Import hospitals.csv
+    from the workspace with data_import; its x/y headers are ambiguous, so
+    resolve the confirmation with longitude x and latitude y, then load the
+    resource with map_add_layer. Search nearby hospitals with
+    catalog_register online over bbox [116, 39, 117, 40] and load the result
+    as a second layer. Restyle the imported hospitals layer with
+    layer_set_style using the preset marker-square-red-large. Then hide the
+    online-search layer and move both layers into the display group
+    "workbench" with one layer_set_state call, as if the panel request had
+    arrived. Export every loaded layer with data_export map true in geojson
+    format, and persist the session with map_save. End with exactly one line
+    reporting the imported feature count, the exported artifact count, and
+    the final map revision. Do not echo any resource, artifact, or layer ids
+    in that final line.
