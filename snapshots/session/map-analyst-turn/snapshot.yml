@@ -1,0 +1,11 @@
+version: 1
+scenario: map-analyst-turn
+profile: headless
+sessionFormat:
+  version: 4
+  coverage: [behavior-baseline]
+composition: map-analyst
+recording: live
+header:
+  class: map-analyst
+  pin: true

@@ -1,0 +1,13 @@
+version: 1
+scenario: map-use-session
+profile: web
+composition: web-map-use-session
+recording: live
+sessionFormat:
+  version: 4
+  coverage: [behavior-baseline]
+header:
+  class: web-map-use-session
+  pin: true
+replay:
+  override: true

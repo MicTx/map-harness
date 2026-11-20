@@ -1,0 +1,55 @@
+# Bilingual-pair consistency record for README.md (docs/i18n/README.md): per heading
+# section, a hash of its English and Chinese blocks outside code blocks and generated regions.
+# After editing either side, bring the other along and re-record with:
+#   pnpm run verify-translation-pairing --write map/tools/README.md
+/:
+  en: 9ffe5b8de8b02178
+  zh: 5698c59d89a754a1
+/map-harness-map-tools:
+  en: 50559dc3f4383fc6
+  zh: a4906c824fa2e412
+/map-harness-map-tools/summary:
+  en: b39952b8a0ff2094
+  zh: 040d98c1fe26c43a
+/map-harness-map-tools/table-of-contents:
+  en: d152484eb41ac6b4
+  zh: 09388d293f9be9cb
+/map-harness-map-tools/use-this-package:
+  en: 0a3147f6ae0af983
+  zh: 670a44af6d630bd0
+/map-harness-map-tools/use-this-package/when-to-choose-it:
+  en: 19cdea18db3982e6
+  zh: 3b7b75b702fb7270
+/map-harness-map-tools/use-this-package/minimal-configuration:
+  en: 65544d8b701ff448
+  zh: 58c8e8504a3b91d1
+/map-harness-map-tools/understand-the-implementation:
+  en: 1007a25d8669917f
+  zh: 32076660c6359200
+/map-harness-map-tools/further-exploration:
+  en: ebe0dfa510f634a9
+  zh: f28349333a5713c6
+/map-harness-map-tools/model-experience:
+  en: 215e7ba838619b7b
+  zh: a311da3843709f90
+/map-harness-map-tools/model-experience/map-observe-result:
+  en: 009063bdc6b19e06
+  zh: 80a86d24ff506d49
+/map-harness-map-tools/model-experience/map-observe-result/request-context-and-condition:
+  en: ab3d2eb2e81c6665
+  zh: e9bd5ed358b3e05b
+/map-harness-map-tools/model-experience/map-observe-result/what-the-model-sees:
+  en: 42602f561c30f57a
+  zh: dece19fa05cb21b1
+/map-harness-map-tools/model-experience/map-observe-result/token-effect:
+  en: 3a21ed3610bedbf2
+  zh: a8c1036191f652d6
+/map-harness-map-tools/model-experience/map-observe-result/kv-cache-effect:
+  en: ffe5faa48e8408a8
+  zh: 7f5f4cea02f3d103
+/map-harness-map-tools/known-limitations-and-deferred-work:
+  en: 89cc3503f40d8514
+  zh: ac595916ebd6a657
+/map-harness-map-tools/known-limitations-and-deferred-work/dev-note:
+  en: 39f543e3f3364537
+  zh: c73e0884079177df

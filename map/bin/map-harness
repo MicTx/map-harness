@@ -1,0 +1,3 @@
+#!/bin/sh
+# map-harness console shim: execs the ESM wrapper with the runtime Node.
+exec node "$(dirname "$0")/map-harness.mjs" "$@"

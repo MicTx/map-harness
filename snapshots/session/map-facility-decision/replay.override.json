@@ -1,0 +1,99 @@
+{
+  "patches": [
+    {
+      "at": 2,
+      "entry": {
+        "kind": "chunks",
+        "chunks": [
+          {
+            "type": "block-start",
+            "index": 0,
+            "blockType": "tool-call"
+          },
+          {
+            "type": "tool-call-delta",
+            "index": 0,
+            "id": "call_00_PCTZCMY7DsCqwMNeem3F7518",
+            "name": "run_get",
+            "argumentsDelta": ""
+          },
+          {
+            "type": "tool-call-delta",
+            "index": 0,
+            "id": "call_00_PCTZCMY7DsCqwMNeem3F7518",
+            "argumentsDelta": "{\"run_id\": \"{{fromRequest:\"run_id\":\"(run-[a-f0-9-]+)\"[^\\n]*?\"request_digest\":\"8996d9276fefd231e4c5c67131ee1c62967b76a1df4091030c878e2e8b04d7dc\"}}\"}"
+          },
+          {
+            "type": "block-end",
+            "index": 0,
+            "block": {
+              "type": "tool-call",
+              "id": "call_00_PCTZCMY7DsCqwMNeem3F7518",
+              "name": "run_get",
+              "arguments": "{\"run_id\": \"{{fromRequest:\"run_id\":\"(run-[a-f0-9-]+)\"[^\\n]*?\"request_digest\":\"8996d9276fefd231e4c5c67131ee1c62967b76a1df4091030c878e2e8b04d7dc\"}}\"}"
+            }
+          },
+          {
+            "type": "block-start",
+            "index": 1,
+            "blockType": "tool-call"
+          },
+          {
+            "type": "tool-call-delta",
+            "index": 1,
+            "id": "call_01_QOJiQvO4nVvlL0KCAKex3760",
+            "name": "run_get",
+            "argumentsDelta": ""
+          },
+          {
+            "type": "tool-call-delta",
+            "index": 1,
+            "id": "call_01_QOJiQvO4nVvlL0KCAKex3760",
+            "argumentsDelta": "{\"run_id\": \"{{fromRequest:\"run_id\":\"(run-[a-f0-9-]+)\"[^\\n]*?\"request_digest\":\"8c614465798e77b48f47d6a0f572592c26960b85ed0c97215a6ae97fe2c6367d\"}}\"}"
+          },
+          {
+            "type": "block-end",
+            "index": 1,
+            "block": {
+              "type": "tool-call",
+              "id": "call_01_QOJiQvO4nVvlL0KCAKex3760",
+              "name": "run_get",
+              "arguments": "{\"run_id\": \"{{fromRequest:\"run_id\":\"(run-[a-f0-9-]+)\"[^\\n]*?\"request_digest\":\"8c614465798e77b48f47d6a0f572592c26960b85ed0c97215a6ae97fe2c6367d\"}}\"}"
+            }
+          },
+          {
+            "type": "usage",
+            "usage": {
+              "inputTokens": 679,
+              "outputTokens": 112,
+              "cacheReadTokens": 32000,
+              "cacheWriteTokens": 0,
+              "totalTokens": 32791
+            }
+          },
+          {
+            "type": "finish",
+            "reason": {
+              "kind": "tool-calls"
+            },
+            "replayState": {
+              "response": {
+                "kind": "deepseek-messages",
+                "version": 1,
+                "model": "deepseek-flash"
+              },
+              "blocks": [
+                {
+                  "type": "tool-call"
+                },
+                {
+                  "type": "tool-call"
+                }
+              ]
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

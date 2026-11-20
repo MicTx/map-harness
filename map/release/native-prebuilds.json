@@ -1,0 +1,70 @@
+{
+  "formatVersion": 1,
+  "version": "0.1.2",
+  "packages": {
+    "darwin-arm64": {
+      "name": "@deepseek-ai/node-addon-system-darwin-arm64",
+      "integrity": "sha512-IR0cx8um19mLCZaJ+H5PLblKr6Eg3PWvVo8eTQBr/SwH2nh5tM9CD9/5fHweNS9Pjt15UdFlGqnvLSd/w+O6Rw==",
+      "binaries": [
+        {
+          "path": "bin/system.node",
+          "sha256": "9534cde445a865250eb7bc8cfe5e231f3f91d0fda3f4aaa694e81f3531ad1130",
+          "executable": false
+        }
+      ]
+    },
+    "darwin-x64": {
+      "name": "@deepseek-ai/node-addon-system-darwin-x64",
+      "integrity": "sha512-XDbmquNapk9aT28y4EKn9lbONVr9YNs1NM/GKH1Gi5gUhjOT9wgRaTv72FJdNaVIInbPAYbPoyn7/y+MzQMNNg==",
+      "binaries": [
+        {
+          "path": "bin/system.node",
+          "sha256": "a9ee57634c6b30e304799605a4b89e2de34b7afaf7a6043265b7ebd657f123be",
+          "executable": false
+        }
+      ]
+    },
+    "linux-arm64": {
+      "name": "@deepseek-ai/node-addon-system-linux-arm64",
+      "integrity": "sha512-Z/DQtqgEYzjBzb2ocHGjMzx51W7xDILkJKKj89nyErr8gZMNiLs+JNL1uKzJqc3VLZB+vYCPaHGyQ3oX6EzEmA==",
+      "binaries": [
+        {
+          "path": "bin/landlock-run",
+          "sha256": "f6ae2ad5893e3123f45329ade5518b33c3ac3b102978001ff1c6a6a8ebe2ad9b",
+          "executable": true
+        },
+        {
+          "path": "bin/glibc/system.node",
+          "sha256": "63cb959a0efc1802f670ad92d2acfa4c72555d62dee998bd89e978861b7b1bec",
+          "executable": false
+        },
+        {
+          "path": "bin/musl/system.node",
+          "sha256": "5a30225892269c7b9a6cf8db568fe8497e417dd8c4e163375784768c072427f0",
+          "executable": false
+        }
+      ]
+    },
+    "linux-x64": {
+      "name": "@deepseek-ai/node-addon-system-linux-x64",
+      "integrity": "sha512-S2aPVHvYCpNCppCFyNlooMYuTB7ucK5lvD9oXQQ42v5Z2s5AoaiCdjz9r2l+ED2rI5oS1x0cUZmKjJH2dxV0pg==",
+      "binaries": [
+        {
+          "path": "bin/landlock-run",
+          "sha256": "a752bc72f111fcc573c3e61fb90fa544541dac0ca498d2e279e1630d7c659b31",
+          "executable": true
+        },
+        {
+          "path": "bin/glibc/system.node",
+          "sha256": "54a9c25c05186c17520f6b7a5ced5f005752c08044c3eb76524cd517287600bc",
+          "executable": false
+        },
+        {
+          "path": "bin/musl/system.node",
+          "sha256": "fb39a23ed7c414b48d6a8ee35b02016400997b0eb15926b1fd53946c7403f1d2",
+          "executable": false
+        }
+      ]
+    }
+  }
+}

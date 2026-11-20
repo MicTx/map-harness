@@ -1,0 +1,14 @@
+# Explicit outbound proxy for the live Wayback composition lane.
+# Only the environment NAME lives here; the URL value is supplied at launch via
+# DSH_WAYBACK_PROXY_URL. Shipped profiles keep the default direct transport.
+- id: map-container
+  config:
+    wayback:
+      # The official local-change detector serially fetches ~18 tilemap and up to
+      # ~34 tile documents; measured 30-66s through the tunnel, over the 15s default.
+      requestTimeoutMs: 120000
+    sources:
+      proxy:
+        outboundProxy:
+          urlEnv: DSH_WAYBACK_PROXY_URL
+          targetResolution: proxy

@@ -1,0 +1,48 @@
+# The scenario's agent preset: the map analyst surface minus the
+# spatial-context pre-injector. Its per-turn baseline/increment texts reprice
+# wall-clock budget counters and re-splice between record and replay, which
+# would make the recorded turn sequence unreplayable; the injector's own suite
+# (map/spatial-context/tests/loop.spec.mjs) owns that coverage. The host
+# fallback row is disabled by the sibling overlay. The map capability surface
+# itself arrives from the map-web bundle on the host plane, so this preset
+# carries only the persona and the analyst's file tools.
+- insert:
+    - id: preset-map-use-session
+      name: '@deepseek-ai/dsh-agent-preset'
+      config:
+        id: map-use-session
+        name: Map observe mode
+        description: Observe the session map and run one bounded action at a time.
+        order: 10
+        plugins:
+          - id: persona
+            name: '@deepseek-ai/dsh-persona'
+            config:
+              prefix: >-
+                You are a GIS analyst agent powered by the {{model}} model. You operate the
+                map container bound to this session: load GeoJSON data from the workspace with
+                map_add_layer and inspect state with map_get_state. After map_observe, use
+                map_use for exactly one bounded pan, zoom, or click at a time; re-observe after
+                every camera change and stop immediately when the user takes control or the
+                per-turn action, observation, and time budget is exhausted. All coordinates
+                converge to WGS84 lon/lat; pass crs whenever a file uses a projected system.
+          - id: agent-instructions
+            name: '@deepseek-ai/dsh-agent-instructions'
+            config:
+              maxBytes: 65536
+          - id: tool-bash
+            name: '@deepseek-ai/dsh-tool-bash'
+            disabled: !!js process.platform === 'win32'
+          - id: tool-pwsh
+            name: '@deepseek-ai/dsh-tool-pwsh'
+            disabled: !!js process.platform !== 'win32'
+          - id: tool-fs
+            name: '@deepseek-ai/dsh-tool-fs'
+          - id: tool-fs-search
+            name: '@deepseek-ai/dsh-tool-fs-search'
+            config:
+              sampleOverCapGlobResults: false
+          - id: tool-todo
+            name: '@deepseek-ai/dsh-tool-todo'
+            config:
+              allowParallelInProgress: true

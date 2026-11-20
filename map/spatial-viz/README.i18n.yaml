@@ -1,0 +1,37 @@
+# Bilingual-pair consistency record for README.md (docs/i18n/README.md): per heading
+# section, a hash of its English and Chinese blocks outside code blocks and generated regions.
+# After editing either side, bring the other along and re-record with:
+#   pnpm run verify-translation-pairing --write map/spatial-viz/README.md
+/:
+  en: ca6d12364539904b
+  zh: 2868a181ef4c793d
+/map-harness-spatial-viz:
+  en: b8e6eeb60b9d8210
+  zh: 6ab080a82850a916
+/map-harness-spatial-viz/summary:
+  en: 2dde121808a76b79
+  zh: 129f7a9f26fa3e49
+/map-harness-spatial-viz/table-of-contents:
+  en: d152484eb41ac6b4
+  zh: c72b311df185caf1
+/map-harness-spatial-viz/use-this-package:
+  en: e304056d08f6f9b7
+  zh: 5e2f3bd6dafd2b84
+/map-harness-spatial-viz/understand-the-implementation:
+  en: 3f26b32344b09f49
+  zh: e6ad75d547755c82
+/map-harness-spatial-viz/further-exploration:
+  en: d3a2d3d06fdee93f
+  zh: afc95f34e2f4dce7
+/map-harness-spatial-viz/model-experience:
+  en: 5b4f38e8129bf025
+  zh: 0182f316c061277a
+/map-harness-spatial-viz/model-experience/kv-cache-effect:
+  en: 7445f91664db86e8
+  zh: e8fcab80a728b39a
+/map-harness-spatial-viz/known-limitations-and-deferred-work:
+  en: 2f9015021515221b
+  zh: 9cfbfa51dc1775f4
+/map-harness-spatial-viz/known-limitations-and-deferred-work/dev-note:
+  en: e67f633dc6fe7773
+  zh: 8ec3e73528ddb1a6

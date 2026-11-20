@@ -1,0 +1,822 @@
+{
+  "patches": [
+    {
+      "at": 3,
+      "entry": {
+        "kind": "chunks",
+        "chunks": [
+          {
+            "type": "block-start",
+            "index": 0,
+            "blockType": "reasoning"
+          },
+          {
+            "type": "reasoning-delta",
+            "index": 0,
+            "text": "Now"
+          },
+          {
+            "type": "reasoning-delta",
+            "index": 0,
+            "text": " map"
+          },
+          {
+            "type": "reasoning-delta",
+            "index": 0,
+            "text": "_"
+          },
+          {
+            "type": "reasoning-delta",
+            "index": 0,
+            "text": "use"
+          },
+          {
+            "type": "reasoning-delta",
+            "index": 0,
+            "text": " pan"
+          },
+          {
+            "type": "reasoning-delta",
+            "index": 0,
+            "text": " with"
+          },
+          {
+            "type": "reasoning-delta",
+            "index": 0,
+            "text": " dx"
+          },
+          {
+            "type": "reasoning-delta",
+            "index": 0,
+            "text": " "
+          },
+          {
+            "type": "reasoning-delta",
+            "index": 0,
+            "text": "60"
+          },
+          {
+            "type": "reasoning-delta",
+            "index": 0,
+            "text": " dy"
+          },
+          {
+            "type": "reasoning-delta",
+            "index": 0,
+            "text": " "
+          },
+          {
+            "type": "reasoning-delta",
+            "index": 0,
+            "text": "40"
+          },
+          {
+            "type": "reasoning-delta",
+            "index": 0,
+            "text": " citing"
+          },
+          {
+            "type": "reasoning-delta",
+            "index": 0,
+            "text": " obs"
+          },
+          {
+            "type": "reasoning-delta",
+            "index": 0,
+            "text": "-id"
+          },
+          {
+            "type": "reasoning-delta",
+            "index": 0,
+            "text": "."
+          },
+          {
+            "type": "block-end",
+            "index": 0,
+            "block": {
+              "type": "reasoning",
+              "text": "Now map_use pan with dx 60 dy 40 citing obs-id."
+            }
+          },
+          {
+            "type": "block-start",
+            "index": 1,
+            "blockType": "tool-call"
+          },
+          {
+            "type": "tool-call-delta",
+            "index": 1,
+            "id": "call_00_J7eyyH9FSKx9UfVnLW2I3540",
+            "name": "map_use",
+            "argumentsDelta": ""
+          },
+          {
+            "type": "tool-call-delta",
+            "index": 1,
+            "id": "call_00_J7eyyH9FSKx9UfVnLW2I3540",
+            "argumentsDelta": "{\"action\": \"pan\", \"observation_id\": \"{{fromRequest:\"observation_id\":\"(obs-[0-9a-f-]+)\"[^\\n]*?\"revision\":1,}}\", \"dx_px\": 60, \"dy_px\": 40}"
+          },
+          {
+            "type": "tool-call-delta",
+            "index": 1,
+            "id": "call_00_J7eyyH9FSKx9UfVnLW2I3540",
+            "argumentsDelta": ""
+          },
+          {
+            "type": "tool-call-delta",
+            "index": 1,
+            "id": "call_00_J7eyyH9FSKx9UfVnLW2I3540",
+            "argumentsDelta": ""
+          },
+          {
+            "type": "tool-call-delta",
+            "index": 1,
+            "id": "call_00_J7eyyH9FSKx9UfVnLW2I3540",
+            "argumentsDelta": ""
+          },
+          {
+            "type": "tool-call-delta",
+            "index": 1,
+            "id": "call_00_J7eyyH9FSKx9UfVnLW2I3540",
+            "argumentsDelta": ""
+          },
+          {
+            "type": "tool-call-delta",
+            "index": 1,
+            "id": "call_00_J7eyyH9FSKx9UfVnLW2I3540",
+            "argumentsDelta": ""
+          },
+          {
+            "type": "tool-call-delta",
+            "index": 1,
+            "id": "call_00_J7eyyH9FSKx9UfVnLW2I3540",
+            "argumentsDelta": ""
+          },
+          {
+            "type": "tool-call-delta",
+            "index": 1,
+            "id": "call_00_J7eyyH9FSKx9UfVnLW2I3540",
+            "argumentsDelta": ""
+          },
+          {
+            "type": "tool-call-delta",
+            "index": 1,
+            "id": "call_00_J7eyyH9FSKx9UfVnLW2I3540",
+            "argumentsDelta": ""
+          },
+          {
+            "type": "tool-call-delta",
+            "index": 1,
+            "id": "call_00_J7eyyH9FSKx9UfVnLW2I3540",
+            "argumentsDelta": ""
+          },
+          {
+            "type": "tool-call-delta",
+            "index": 1,
+            "id": "call_00_J7eyyH9FSKx9UfVnLW2I3540",
+            "argumentsDelta": ""
+          },
+          {
+            "type": "tool-call-delta",
+            "index": 1,
+            "id": "call_00_J7eyyH9FSKx9UfVnLW2I3540",
+            "argumentsDelta": ""
+          },
+          {
+            "type": "tool-call-delta",
+            "index": 1,
+            "id": "call_00_J7eyyH9FSKx9UfVnLW2I3540",
+            "argumentsDelta": ""
+          },
+          {
+            "type": "tool-call-delta",
+            "index": 1,
+            "id": "call_00_J7eyyH9FSKx9UfVnLW2I3540",
+            "argumentsDelta": ""
+          },
+          {
+            "type": "tool-call-delta",
+            "index": 1,
+            "id": "call_00_J7eyyH9FSKx9UfVnLW2I3540",
+            "argumentsDelta": ""
+          },
+          {
+            "type": "tool-call-delta",
+            "index": 1,
+            "id": "call_00_J7eyyH9FSKx9UfVnLW2I3540",
+            "argumentsDelta": ""
+          },
+          {
+            "type": "tool-call-delta",
+            "index": 1,
+            "id": "call_00_J7eyyH9FSKx9UfVnLW2I3540",
+            "argumentsDelta": ""
+          },
+          {
+            "type": "tool-call-delta",
+            "index": 1,
+            "id": "call_00_J7eyyH9FSKx9UfVnLW2I3540",
+            "argumentsDelta": ""
+          },
+          {
+            "type": "tool-call-delta",
+            "index": 1,
+            "id": "call_00_J7eyyH9FSKx9UfVnLW2I3540",
+            "argumentsDelta": ""
+          },
+          {
+            "type": "tool-call-delta",
+            "index": 1,
+            "id": "call_00_J7eyyH9FSKx9UfVnLW2I3540",
+            "argumentsDelta": ""
+          },
+          {
+            "type": "tool-call-delta",
+            "index": 1,
+            "id": "call_00_J7eyyH9FSKx9UfVnLW2I3540",
+            "argumentsDelta": ""
+          },
+          {
+            "type": "tool-call-delta",
+            "index": 1,
+            "id": "call_00_J7eyyH9FSKx9UfVnLW2I3540",
+            "argumentsDelta": ""
+          },
+          {
+            "type": "tool-call-delta",
+            "index": 1,
+            "id": "call_00_J7eyyH9FSKx9UfVnLW2I3540",
+            "argumentsDelta": ""
+          },
+          {
+            "type": "tool-call-delta",
+            "index": 1,
+            "id": "call_00_J7eyyH9FSKx9UfVnLW2I3540",
+            "argumentsDelta": ""
+          },
+          {
+            "type": "tool-call-delta",
+            "index": 1,
+            "id": "call_00_J7eyyH9FSKx9UfVnLW2I3540",
+            "argumentsDelta": ""
+          },
+          {
+            "type": "tool-call-delta",
+            "index": 1,
+            "id": "call_00_J7eyyH9FSKx9UfVnLW2I3540",
+            "argumentsDelta": ""
+          },
+          {
+            "type": "tool-call-delta",
+            "index": 1,
+            "id": "call_00_J7eyyH9FSKx9UfVnLW2I3540",
+            "argumentsDelta": ""
+          },
+          {
+            "type": "tool-call-delta",
+            "index": 1,
+            "id": "call_00_J7eyyH9FSKx9UfVnLW2I3540",
+            "argumentsDelta": ""
+          },
+          {
+            "type": "tool-call-delta",
+            "index": 1,
+            "id": "call_00_J7eyyH9FSKx9UfVnLW2I3540",
+            "argumentsDelta": ""
+          },
+          {
+            "type": "tool-call-delta",
+            "index": 1,
+            "id": "call_00_J7eyyH9FSKx9UfVnLW2I3540",
+            "argumentsDelta": ""
+          },
+          {
+            "type": "tool-call-delta",
+            "index": 1,
+            "id": "call_00_J7eyyH9FSKx9UfVnLW2I3540",
+            "argumentsDelta": ""
+          },
+          {
+            "type": "tool-call-delta",
+            "index": 1,
+            "id": "call_00_J7eyyH9FSKx9UfVnLW2I3540",
+            "argumentsDelta": ""
+          },
+          {
+            "type": "tool-call-delta",
+            "index": 1,
+            "id": "call_00_J7eyyH9FSKx9UfVnLW2I3540",
+            "argumentsDelta": ""
+          },
+          {
+            "type": "tool-call-delta",
+            "index": 1,
+            "id": "call_00_J7eyyH9FSKx9UfVnLW2I3540",
+            "argumentsDelta": ""
+          },
+          {
+            "type": "tool-call-delta",
+            "index": 1,
+            "id": "call_00_J7eyyH9FSKx9UfVnLW2I3540",
+            "argumentsDelta": ""
+          },
+          {
+            "type": "tool-call-delta",
+            "index": 1,
+            "id": "call_00_J7eyyH9FSKx9UfVnLW2I3540",
+            "argumentsDelta": ""
+          },
+          {
+            "type": "tool-call-delta",
+            "index": 1,
+            "id": "call_00_J7eyyH9FSKx9UfVnLW2I3540",
+            "argumentsDelta": ""
+          },
+          {
+            "type": "tool-call-delta",
+            "index": 1,
+            "id": "call_00_J7eyyH9FSKx9UfVnLW2I3540",
+            "argumentsDelta": ""
+          },
+          {
+            "type": "tool-call-delta",
+            "index": 1,
+            "id": "call_00_J7eyyH9FSKx9UfVnLW2I3540",
+            "argumentsDelta": ""
+          },
+          {
+            "type": "tool-call-delta",
+            "index": 1,
+            "id": "call_00_J7eyyH9FSKx9UfVnLW2I3540",
+            "argumentsDelta": ""
+          },
+          {
+            "type": "tool-call-delta",
+            "index": 1,
+            "id": "call_00_J7eyyH9FSKx9UfVnLW2I3540",
+            "argumentsDelta": ""
+          },
+          {
+            "type": "tool-call-delta",
+            "index": 1,
+            "id": "call_00_J7eyyH9FSKx9UfVnLW2I3540",
+            "argumentsDelta": ""
+          },
+          {
+            "type": "tool-call-delta",
+            "index": 1,
+            "id": "call_00_J7eyyH9FSKx9UfVnLW2I3540",
+            "argumentsDelta": ""
+          },
+          {
+            "type": "tool-call-delta",
+            "index": 1,
+            "id": "call_00_J7eyyH9FSKx9UfVnLW2I3540",
+            "argumentsDelta": ""
+          },
+          {
+            "type": "tool-call-delta",
+            "index": 1,
+            "id": "call_00_J7eyyH9FSKx9UfVnLW2I3540",
+            "argumentsDelta": ""
+          },
+          {
+            "type": "tool-call-delta",
+            "index": 1,
+            "id": "call_00_J7eyyH9FSKx9UfVnLW2I3540",
+            "argumentsDelta": ""
+          },
+          {
+            "type": "tool-call-delta",
+            "index": 1,
+            "id": "call_00_J7eyyH9FSKx9UfVnLW2I3540",
+            "argumentsDelta": ""
+          },
+          {
+            "type": "tool-call-delta",
+            "index": 1,
+            "id": "call_00_J7eyyH9FSKx9UfVnLW2I3540",
+            "argumentsDelta": ""
+          },
+          {
+            "type": "tool-call-delta",
+            "index": 1,
+            "id": "call_00_J7eyyH9FSKx9UfVnLW2I3540",
+            "argumentsDelta": ""
+          },
+          {
+            "type": "tool-call-delta",
+            "index": 1,
+            "id": "call_00_J7eyyH9FSKx9UfVnLW2I3540",
+            "argumentsDelta": ""
+          },
+          {
+            "type": "tool-call-delta",
+            "index": 1,
+            "id": "call_00_J7eyyH9FSKx9UfVnLW2I3540",
+            "argumentsDelta": ""
+          },
+          {
+            "type": "tool-call-delta",
+            "index": 1,
+            "id": "call_00_J7eyyH9FSKx9UfVnLW2I3540",
+            "argumentsDelta": ""
+          },
+          {
+            "type": "block-end",
+            "index": 1,
+            "block": {
+              "type": "tool-call",
+              "id": "call_00_J7eyyH9FSKx9UfVnLW2I3540",
+              "name": "map_use",
+              "arguments": "{\"action\": \"pan\", \"observation_id\": \"{{fromRequest:\"observation_id\":\"(obs-[0-9a-f-]+)\"[^\\n]*?\"revision\":1,}}\", \"dx_px\": 60, \"dy_px\": 40}"
+            }
+          },
+          {
+            "type": "usage",
+            "usage": {
+              "inputTokens": 876,
+              "outputTokens": 132,
+              "cacheReadTokens": 29568,
+              "cacheWriteTokens": 0,
+              "totalTokens": 30576
+            }
+          },
+          {
+            "type": "finish",
+            "reason": {
+              "kind": "tool-calls"
+            },
+            "replayState": {
+              "response": {
+                "kind": "deepseek-messages",
+                "version": 1,
+                "model": "deepseek-flash"
+              },
+              "blocks": [
+                {
+                  "type": "reasoning",
+                  "signature": "7dbc0e55-1720-4e19-aba5-583b43c4293d"
+                },
+                {
+                  "type": "tool-call"
+                }
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
+      "at": 5,
+      "entry": {
+        "kind": "chunks",
+        "chunks": [
+          {
+            "type": "block-start",
+            "index": 0,
+            "blockType": "reasoning"
+          },
+          {
+            "type": "block-end",
+            "index": 0,
+            "block": {
+              "type": "reasoning",
+              "text": ""
+            }
+          },
+          {
+            "type": "block-start",
+            "index": 1,
+            "blockType": "tool-call"
+          },
+          {
+            "type": "tool-call-delta",
+            "index": 1,
+            "id": "call_00_ET_EQVfTKanMKHWKAQNLIgN3820",
+            "name": "map_use",
+            "argumentsDelta": ""
+          },
+          {
+            "type": "tool-call-delta",
+            "index": 1,
+            "id": "call_00_ET_EQVfTKanMKHWKAQNLIgN3820",
+            "argumentsDelta": "{\"action\": \"finish\", \"observation_id\": \"{{fromRequest:\"observation_id\":\"(obs-[0-9a-f-]+)\"[^\\n]*?\"revision\":2,}}\", \"reason\": \"requested pan verified\"}"
+          },
+          {
+            "type": "tool-call-delta",
+            "index": 1,
+            "id": "call_00_ET_EQVfTKanMKHWKAQNLIgN3820",
+            "argumentsDelta": ""
+          },
+          {
+            "type": "tool-call-delta",
+            "index": 1,
+            "id": "call_00_ET_EQVfTKanMKHWKAQNLIgN3820",
+            "argumentsDelta": ""
+          },
+          {
+            "type": "tool-call-delta",
+            "index": 1,
+            "id": "call_00_ET_EQVfTKanMKHWKAQNLIgN3820",
+            "argumentsDelta": ""
+          },
+          {
+            "type": "tool-call-delta",
+            "index": 1,
+            "id": "call_00_ET_EQVfTKanMKHWKAQNLIgN3820",
+            "argumentsDelta": ""
+          },
+          {
+            "type": "tool-call-delta",
+            "index": 1,
+            "id": "call_00_ET_EQVfTKanMKHWKAQNLIgN3820",
+            "argumentsDelta": ""
+          },
+          {
+            "type": "tool-call-delta",
+            "index": 1,
+            "id": "call_00_ET_EQVfTKanMKHWKAQNLIgN3820",
+            "argumentsDelta": ""
+          },
+          {
+            "type": "tool-call-delta",
+            "index": 1,
+            "id": "call_00_ET_EQVfTKanMKHWKAQNLIgN3820",
+            "argumentsDelta": ""
+          },
+          {
+            "type": "tool-call-delta",
+            "index": 1,
+            "id": "call_00_ET_EQVfTKanMKHWKAQNLIgN3820",
+            "argumentsDelta": ""
+          },
+          {
+            "type": "tool-call-delta",
+            "index": 1,
+            "id": "call_00_ET_EQVfTKanMKHWKAQNLIgN3820",
+            "argumentsDelta": ""
+          },
+          {
+            "type": "tool-call-delta",
+            "index": 1,
+            "id": "call_00_ET_EQVfTKanMKHWKAQNLIgN3820",
+            "argumentsDelta": ""
+          },
+          {
+            "type": "tool-call-delta",
+            "index": 1,
+            "id": "call_00_ET_EQVfTKanMKHWKAQNLIgN3820",
+            "argumentsDelta": ""
+          },
+          {
+            "type": "tool-call-delta",
+            "index": 1,
+            "id": "call_00_ET_EQVfTKanMKHWKAQNLIgN3820",
+            "argumentsDelta": ""
+          },
+          {
+            "type": "tool-call-delta",
+            "index": 1,
+            "id": "call_00_ET_EQVfTKanMKHWKAQNLIgN3820",
+            "argumentsDelta": ""
+          },
+          {
+            "type": "tool-call-delta",
+            "index": 1,
+            "id": "call_00_ET_EQVfTKanMKHWKAQNLIgN3820",
+            "argumentsDelta": ""
+          },
+          {
+            "type": "tool-call-delta",
+            "index": 1,
+            "id": "call_00_ET_EQVfTKanMKHWKAQNLIgN3820",
+            "argumentsDelta": ""
+          },
+          {
+            "type": "tool-call-delta",
+            "index": 1,
+            "id": "call_00_ET_EQVfTKanMKHWKAQNLIgN3820",
+            "argumentsDelta": ""
+          },
+          {
+            "type": "tool-call-delta",
+            "index": 1,
+            "id": "call_00_ET_EQVfTKanMKHWKAQNLIgN3820",
+            "argumentsDelta": ""
+          },
+          {
+            "type": "tool-call-delta",
+            "index": 1,
+            "id": "call_00_ET_EQVfTKanMKHWKAQNLIgN3820",
+            "argumentsDelta": ""
+          },
+          {
+            "type": "tool-call-delta",
+            "index": 1,
+            "id": "call_00_ET_EQVfTKanMKHWKAQNLIgN3820",
+            "argumentsDelta": ""
+          },
+          {
+            "type": "tool-call-delta",
+            "index": 1,
+            "id": "call_00_ET_EQVfTKanMKHWKAQNLIgN3820",
+            "argumentsDelta": ""
+          },
+          {
+            "type": "tool-call-delta",
+            "index": 1,
+            "id": "call_00_ET_EQVfTKanMKHWKAQNLIgN3820",
+            "argumentsDelta": ""
+          },
+          {
+            "type": "tool-call-delta",
+            "index": 1,
+            "id": "call_00_ET_EQVfTKanMKHWKAQNLIgN3820",
+            "argumentsDelta": ""
+          },
+          {
+            "type": "tool-call-delta",
+            "index": 1,
+            "id": "call_00_ET_EQVfTKanMKHWKAQNLIgN3820",
+            "argumentsDelta": ""
+          },
+          {
+            "type": "tool-call-delta",
+            "index": 1,
+            "id": "call_00_ET_EQVfTKanMKHWKAQNLIgN3820",
+            "argumentsDelta": ""
+          },
+          {
+            "type": "tool-call-delta",
+            "index": 1,
+            "id": "call_00_ET_EQVfTKanMKHWKAQNLIgN3820",
+            "argumentsDelta": ""
+          },
+          {
+            "type": "tool-call-delta",
+            "index": 1,
+            "id": "call_00_ET_EQVfTKanMKHWKAQNLIgN3820",
+            "argumentsDelta": ""
+          },
+          {
+            "type": "tool-call-delta",
+            "index": 1,
+            "id": "call_00_ET_EQVfTKanMKHWKAQNLIgN3820",
+            "argumentsDelta": ""
+          },
+          {
+            "type": "tool-call-delta",
+            "index": 1,
+            "id": "call_00_ET_EQVfTKanMKHWKAQNLIgN3820",
+            "argumentsDelta": ""
+          },
+          {
+            "type": "tool-call-delta",
+            "index": 1,
+            "id": "call_00_ET_EQVfTKanMKHWKAQNLIgN3820",
+            "argumentsDelta": ""
+          },
+          {
+            "type": "tool-call-delta",
+            "index": 1,
+            "id": "call_00_ET_EQVfTKanMKHWKAQNLIgN3820",
+            "argumentsDelta": ""
+          },
+          {
+            "type": "tool-call-delta",
+            "index": 1,
+            "id": "call_00_ET_EQVfTKanMKHWKAQNLIgN3820",
+            "argumentsDelta": ""
+          },
+          {
+            "type": "tool-call-delta",
+            "index": 1,
+            "id": "call_00_ET_EQVfTKanMKHWKAQNLIgN3820",
+            "argumentsDelta": ""
+          },
+          {
+            "type": "tool-call-delta",
+            "index": 1,
+            "id": "call_00_ET_EQVfTKanMKHWKAQNLIgN3820",
+            "argumentsDelta": ""
+          },
+          {
+            "type": "tool-call-delta",
+            "index": 1,
+            "id": "call_00_ET_EQVfTKanMKHWKAQNLIgN3820",
+            "argumentsDelta": ""
+          },
+          {
+            "type": "tool-call-delta",
+            "index": 1,
+            "id": "call_00_ET_EQVfTKanMKHWKAQNLIgN3820",
+            "argumentsDelta": ""
+          },
+          {
+            "type": "tool-call-delta",
+            "index": 1,
+            "id": "call_00_ET_EQVfTKanMKHWKAQNLIgN3820",
+            "argumentsDelta": ""
+          },
+          {
+            "type": "tool-call-delta",
+            "index": 1,
+            "id": "call_00_ET_EQVfTKanMKHWKAQNLIgN3820",
+            "argumentsDelta": ""
+          },
+          {
+            "type": "tool-call-delta",
+            "index": 1,
+            "id": "call_00_ET_EQVfTKanMKHWKAQNLIgN3820",
+            "argumentsDelta": ""
+          },
+          {
+            "type": "tool-call-delta",
+            "index": 1,
+            "id": "call_00_ET_EQVfTKanMKHWKAQNLIgN3820",
+            "argumentsDelta": ""
+          },
+          {
+            "type": "tool-call-delta",
+            "index": 1,
+            "id": "call_00_ET_EQVfTKanMKHWKAQNLIgN3820",
+            "argumentsDelta": ""
+          },
+          {
+            "type": "tool-call-delta",
+            "index": 1,
+            "id": "call_00_ET_EQVfTKanMKHWKAQNLIgN3820",
+            "argumentsDelta": ""
+          },
+          {
+            "type": "tool-call-delta",
+            "index": 1,
+            "id": "call_00_ET_EQVfTKanMKHWKAQNLIgN3820",
+            "argumentsDelta": ""
+          },
+          {
+            "type": "tool-call-delta",
+            "index": 1,
+            "id": "call_00_ET_EQVfTKanMKHWKAQNLIgN3820",
+            "argumentsDelta": ""
+          },
+          {
+            "type": "tool-call-delta",
+            "index": 1,
+            "id": "call_00_ET_EQVfTKanMKHWKAQNLIgN3820",
+            "argumentsDelta": ""
+          },
+          {
+            "type": "tool-call-delta",
+            "index": 1,
+            "id": "call_00_ET_EQVfTKanMKHWKAQNLIgN3820",
+            "argumentsDelta": ""
+          },
+          {
+            "type": "block-end",
+            "index": 1,
+            "block": {
+              "type": "tool-call",
+              "id": "call_00_ET_EQVfTKanMKHWKAQNLIgN3820",
+              "name": "map_use",
+              "arguments": "{\"action\": \"finish\", \"observation_id\": \"{{fromRequest:\"observation_id\":\"(obs-[0-9a-f-]+)\"[^\\n]*?\"revision\":2,}}\", \"reason\": \"requested pan verified\"}"
+            }
+          },
+          {
+            "type": "usage",
+            "usage": {
+              "inputTokens": 876,
+              "outputTokens": 98,
+              "cacheReadTokens": 30720,
+              "cacheWriteTokens": 0,
+              "totalTokens": 31694
+            }
+          },
+          {
+            "type": "finish",
+            "reason": {
+              "kind": "tool-calls"
+            },
+            "replayState": {
+              "response": {
+                "kind": "deepseek-messages",
+                "version": 1,
+                "model": "deepseek-flash"
+              },
+              "blocks": [
+                {
+                  "type": "reasoning",
+                  "signature": "2f6189e1-986c-429f-a882-86d5068808dd"
+                },
+                {
+                  "type": "tool-call"
+                }
+              ]
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

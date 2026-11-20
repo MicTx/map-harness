@@ -1,0 +1,32 @@
+# map-use-session overlay: capture permission for the fixture-tiled basemap,
+# and the image-capable model the observation tool requires. The scenario
+# routes every imagery tile to a committed PNG, so `allow` admits the
+# controlled displayed source; record mode resolves the same model id
+# through the real adapter, replay through the catalog entry with
+# inputModalities [text, image].
+- id: map-container
+  config:
+    observation:
+      capturePolicy: allow
+    sources:
+      presets:
+        # The scenario substitutes every imagery tile with a committed fixture
+        # PNG; the deployment administrator's source review is the overlay's
+        # decision here, granting automated use for this controlled source.
+        esri-world-imagery:
+          automatedMapUse: allowed
+
+# The recorded session's request model: the replay adapter's catalog declares
+# it image-capable, so map_observe's verified-image gate passes while the
+# request header stays identical to the committed fixture.
+- id: agent-default-model
+  config:
+    provider: deepseek-official
+    model: deepseek-flash
+
+# The spatial-context injector's per-turn baseline/increment texts reprice
+# wall-clock budget counters and splice order-sensitive history that no replay
+# can reproduce, so this scenario pins the map surface without it — the preset
+# sibling drops the preset-plane listener and this row drops the host fallback.
+- id: spatial-context-agent-fallback
+  disabled: true

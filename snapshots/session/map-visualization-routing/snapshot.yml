@@ -1,0 +1,10 @@
+version: 1
+scenario: map-visualization-routing
+profile: headless
+sessionFormat:
+  version: 4
+  coverage: [behavior-baseline]
+composition: map-analyst
+recording: authored
+header:
+  class: map-analyst

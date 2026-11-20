@@ -1,0 +1,34 @@
+# Bilingual-pair consistency record for README.md (docs/i18n/README.md): per heading
+# section, a hash of its English and Chinese blocks outside code blocks and generated regions.
+# After editing either side, bring the other along and re-record with:
+#   pnpm run verify-translation-pairing --write map/lbs-keyring/README.md
+/:
+  en: 8c1b0ba4a86c5a17
+  zh: 053c8c77060fe867
+/map-harness-lbs-keyring:
+  en: 0e2d9c98a1991678
+  zh: 10e87f238a213b51
+/map-harness-lbs-keyring/summary:
+  en: 43c53f1eb17bbf3e
+  zh: 6da1b8e5b79a527d
+/map-harness-lbs-keyring/use-this-package:
+  en: bbff250eba0f1b89
+  zh: 0a618f05cc88ee2b
+/map-harness-lbs-keyring/use-this-package/when-to-choose-it:
+  en: 9f4ebbb268b40b1c
+  zh: 186548a30cff534c
+/map-harness-lbs-keyring/use-this-package/data-ownership:
+  en: e904bd5963ee2da3
+  zh: b2b14df9d1879814
+/map-harness-lbs-keyring/use-this-package/usage-modes:
+  en: 5f7e4bc2971638dc
+  zh: af1ef4ec84e40b49
+/map-harness-lbs-keyring/service-contract:
+  en: 9a1a7e0208b5d098
+  zh: b587bf6153101860
+/map-harness-lbs-keyring/tests:
+  en: a8b26d089105ee71
+  zh: e664671523c67d0d
+/map-harness-lbs-keyring/known-limitations-and-deferred-work:
+  en: c3b6bddd1a6a7c68
+  zh: 4fc6be8a598b6360
