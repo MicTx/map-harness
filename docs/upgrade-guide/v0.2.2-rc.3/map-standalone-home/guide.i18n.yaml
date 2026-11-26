@@ -1,0 +1,16 @@
+# Bilingual-pair consistency record for guide.md (docs/i18n/README.md): per heading
+# section, a hash of its English and Chinese blocks outside code blocks and generated regions.
+# After editing either side, bring the other along and re-record with:
+#   pnpm run verify-translation-pairing --write docs/upgrade-guide/v0.2.2-rc.3/map-standalone-home/guide.md
+/:
+  en: e46b953fa177eaeb
+  zh: c00a1dc2df9c87bf
+/map-uses-its-own-data-home:
+  en: 2fa5241f0aed5b8b
+  zh: dc95d096955a42fd
+/map-uses-its-own-data-home/change:
+  en: 5aea8ac1705dfc54
+  zh: 7a956244914fbfbf
+/map-uses-its-own-data-home/migration:
+  en: 38f532209ee67ba1
+  zh: fb54e96fa25b366c

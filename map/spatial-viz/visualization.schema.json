@@ -1,0 +1,180 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Spatial visualization intent",
+  "description": "Structural validation only. Consumers must also run validateVisualizationSpec for real calendar dates, IANA timezones and increasing windows.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "type"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "const": 1
+    },
+    "type": {
+      "type": "string",
+      "enum": [
+        "single-symbol",
+        "unique-value",
+        "choropleth",
+        "graduated-color",
+        "graduated-symbol",
+        "proportional-symbol",
+        "dot-density",
+        "bivariate",
+        "cartogram",
+        "heatmap",
+        "kernel-density",
+        "grid",
+        "hexbin",
+        "h3",
+        "point-cluster",
+        "contour",
+        "isoband",
+        "raster",
+        "hillshade",
+        "terrain",
+        "slope",
+        "viewshed",
+        "line-of-sight",
+        "network-accessibility",
+        "flow-summary",
+        "flow-map",
+        "od-arc",
+        "trajectory",
+        "animated-trips",
+        "time-animation",
+        "temporal-change",
+        "space-time-cube",
+        "small-multiples",
+        "swipe",
+        "comparison",
+        "hotspot",
+        "local-autocorrelation",
+        "space-time-cluster",
+        "extrusion",
+        "point-cloud",
+        "volume",
+        "vector-field",
+        "uncertainty",
+        "forecast",
+        "realtime"
+      ]
+    },
+    "field": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "pattern": "\\S"
+    },
+    "unit": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "pattern": "\\S"
+    },
+    "measure": {
+      "type": "string",
+      "enum": [
+        "total",
+        "rate",
+        "density"
+      ]
+    },
+    "denominatorField": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "pattern": "\\S"
+    },
+    "timeBinding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "timeField",
+        "timezone",
+        "granularity",
+        "window"
+      ],
+      "properties": {
+        "timeField": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "\\S"
+        },
+        "timezone": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "\\S"
+        },
+        "granularity": {
+          "type": "string",
+          "enum": [
+            "hour",
+            "day",
+            "week",
+            "month"
+          ]
+        },
+        "window": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "from",
+            "to"
+          ],
+          "properties": {
+            "from": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128,
+              "pattern": "^\\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\\d|3[01])T([01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d{1,3})?(?:Z|[+-](?:[01]\\d|2[0-3]):[0-5]\\d)$",
+              "format": "date-time"
+            },
+            "to": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128,
+              "pattern": "^\\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\\d|3[01])T([01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d{1,3})?(?:Z|[+-](?:[01]\\d|2[0-3]):[0-5]\\d)$",
+              "format": "date-time"
+            }
+          }
+        }
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "measure": {
+            "enum": [
+              "rate",
+              "density"
+            ]
+          }
+        },
+        "required": [
+          "measure"
+        ]
+      },
+      "then": {
+        "required": [
+          "field",
+          "unit",
+          "denominatorField"
+        ]
+      },
+      "else": {
+        "not": {
+          "required": [
+            "denominatorField"
+          ]
+        }
+      }
+    }
+  ]
+}

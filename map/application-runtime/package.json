@@ -1,0 +1,40 @@
+{
+  "name": "@map-harness/application-runtime",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Dependency-only closure for the local compiled Map Harness application.",
+  "license": "PolyForm-Noncommercial-1.0.0",
+  "files": [
+    "package.json"
+  ],
+  "dependencies": {
+    "dsh-python-runtime-closure": "workspace:*",
+    "@deepseek-ai/dsh": "workspace:*",
+    "@deepseek-ai/dsh-host-directory-picker": "workspace:*",
+    "bytenode": "2.1.0",
+    "playwright": "1.61.1",
+    "@map-harness/client-ui-brand": "workspace:*",
+    "@map-harness/ui-settings-lbs": "workspace:*",
+    "@map-harness/map-layers": "workspace:*",
+    "@map-harness/map-container": "workspace:*",
+    "@map-harness/arcgis-mcp": "workspace:*",
+    "@map-harness/map-tools": "workspace:*",
+    "@map-harness/spatial-storage": "workspace:*",
+    "@map-harness/spatial-realtime": "workspace:*",
+    "@map-harness/stream-providers": "workspace:*",
+    "@map-harness/spatial-scale": "workspace:*",
+    "@map-harness/spatial-catalog": "workspace:*",
+    "@map-harness/spatial-context": "workspace:*",
+    "@map-harness/spatial-accessibility": "workspace:*",
+    "@map-harness/spatial-statistics": "workspace:*",
+    "@map-harness/spatial-decision": "workspace:*",
+    "@map-harness/spatial-viz": "workspace:*",
+    "@map-harness/spatial-collab": "workspace:*",
+    "@map-harness/spatial-terrain": "workspace:*",
+    "@map-harness/spatial-perf": "workspace:*",
+    "@map-harness/spatial-observability": "workspace:*",
+    "@map-harness/spatial-connect": "workspace:*",
+    "@map-harness/mcp-transport": "workspace:*"
+  }
+}

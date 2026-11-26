@@ -1,0 +1,22 @@
+{
+  "action": "pan",
+  "action_id": "use-call",
+  "turn": 1,
+  "status": "candidate",
+  "rendered": false,
+  "observation_id": "obs-1",
+  "center": [104.80000000000001, 36.4],
+  "zoom": 6,
+  "wkid": 4326,
+  "source_revision": 0,
+  "candidate_revision": 1,
+  "budget": {
+    "actionsUsed": 1,
+    "actionsRemaining": null,
+    "observationsUsed": 1,
+    "observationsRemaining": null,
+    "elapsedMs": 0,
+    "elapsedRemainingMs": null
+  },
+  "must_observe": true
+}

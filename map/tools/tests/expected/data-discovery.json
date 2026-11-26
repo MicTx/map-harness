@@ -1,0 +1,38 @@
+{
+  "status": "succeeded",
+  "resources": [
+    {
+      "ref": "res-78d6d52ab82ba4faede9c4e2@v2",
+      "contentDigest": "c2cadfafbd14bafc84cb87620c38a2f4461534fb5f548029c26586300156b25e",
+      "schemaDigest": "f23223c41dc25037e76a82278b1d86ee1f295781de46ef8f56c1736606b18e05",
+      "nativeCrs": "EPSG:4326",
+      "featureCount": 1,
+      "authorization": "local",
+      "fields": [
+        {
+          "name": "population",
+          "type": "number"
+        },
+        {
+          "name": "year",
+          "type": "number"
+        }
+      ],
+      "total_fields": 2,
+      "geometry_types": [
+        "Point"
+      ],
+      "extent": [
+        116.4,
+        39.9,
+        116.4,
+        39.9
+      ],
+      "extent_crs": "EPSG:4326",
+      "valid_time": null,
+      "registered_at": "<registration-time>"
+    }
+  ],
+  "has_more": false,
+  "next_offset": null
+}

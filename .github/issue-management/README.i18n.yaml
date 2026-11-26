@@ -1,0 +1,34 @@
+# Bilingual-pair consistency record for README.md (docs/i18n/README.md): per heading
+# section, a hash of its English and Chinese blocks outside code blocks and generated regions.
+# After editing either side, bring the other along and re-record with:
+#   pnpm run verify-translation-pairing --write .github/issue-management/README.md
+/:
+  en: d5e0fd5da06b95ab
+  zh: db4281526c40cc1d
+/issue-management:
+  en: 44fb5f74b6908794
+  zh: cc25f420bac7d40b
+/issue-management/summary:
+  en: b3f6f5f011516611
+  zh: 7e6c83caf28ea807
+/issue-management/table-of-contents:
+  en: cff988027897ee0d
+  zh: 36a444b895dfdc48
+/issue-management/pull-request-policy:
+  en: 9176271099a87927
+  zh: 654eed37972a99b8
+/issue-management/lifecycle-events:
+  en: d9dfbddb210dd35c
+  zh: d88576e4ff6b00c7
+/issue-management/configuration-and-limitations:
+  en: d8c2de2a1437af8f
+  zh: 85d6207edaebdee2
+/issue-management/module-ownership:
+  en: e83f694e0be99e69
+  zh: 85fb201f86af2ce8
+/issue-management/verification:
+  en: b52fe10bcb063600
+  zh: 3362170645a58eff
+/issue-management/dev-note:
+  en: b75c8458928b72b9
+  zh: 003ba4e17b4b5269

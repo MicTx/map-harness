@@ -1,0 +1,14 @@
+{
+  "format": "map-harness-install-contract-1",
+  "manifest": {
+    "file": "map-install-manifest.json",
+    "format": "map-harness-install-manifest-1"
+  },
+  "product": "map-harness",
+  "identityRevision": 1,
+  "distributions": ["portable", "managed"],
+  "channels": ["stable", "preview"],
+  "versionSource": "map/release/version.json",
+  "targetSource": "scripts/primary-runtime/lock.json",
+  "payloadManifest": "web-service-manifest.json"
+}

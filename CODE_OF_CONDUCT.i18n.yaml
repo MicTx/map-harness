@@ -1,0 +1,40 @@
+# Bilingual-pair consistency record for CODE_OF_CONDUCT.md (docs/i18n/README.md): per heading
+# section, a hash of its English and Chinese blocks outside code blocks and generated regions.
+# After editing either side, bring the other along and re-record with:
+#   pnpm run verify-translation-pairing --write CODE_OF_CONDUCT.md
+/contributor-covenant-code-of-conduct:
+  en: 1553eacf74dcd63b
+  zh: 6f52c49184e8b0f4
+/contributor-covenant-code-of-conduct/our-pledge:
+  en: 9b33ea63ea06e8b7
+  zh: c4a952c09af54324
+/contributor-covenant-code-of-conduct/our-standards:
+  en: c214e22e0b15f144
+  zh: c0785d4f01ba7aac
+/contributor-covenant-code-of-conduct/enforcement-responsibilities:
+  en: 570b0b7f58f97e29
+  zh: 79fed8083a8b898f
+/contributor-covenant-code-of-conduct/scope:
+  en: 18bfc72d1c7ceeed
+  zh: 67f4b6010afd052d
+/contributor-covenant-code-of-conduct/enforcement:
+  en: 83d58b02991f5788
+  zh: e5926b6d45b83f2a
+/contributor-covenant-code-of-conduct/enforcement-guidelines:
+  en: 68c35beeea2c7576
+  zh: 5550b409caddeb28
+/contributor-covenant-code-of-conduct/enforcement-guidelines/1-correction:
+  en: 6324420954a38a44
+  zh: ff8fed3d41907424
+/contributor-covenant-code-of-conduct/enforcement-guidelines/2-warning:
+  en: 412f5ee1b26297d5
+  zh: fc46890107dfd7f8
+/contributor-covenant-code-of-conduct/enforcement-guidelines/3-temporary-ban:
+  en: d1e4c848c38049da
+  zh: 02e7b64fc425e9d2
+/contributor-covenant-code-of-conduct/enforcement-guidelines/4-permanent-ban:
+  en: fe2f95f4897ae65e
+  zh: 645359a955ec249e
+/contributor-covenant-code-of-conduct/attribution:
+  en: 6ef0bda064f26cb3
+  zh: f201d4aa158008d3

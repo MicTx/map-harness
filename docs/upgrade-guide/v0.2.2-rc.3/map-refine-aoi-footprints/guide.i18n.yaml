@@ -1,0 +1,16 @@
+# Bilingual-pair consistency record for guide.md (docs/i18n/README.md): per heading
+# section, a hash of its English and Chinese blocks outside code blocks and generated regions.
+# After editing either side, bring the other along and re-record with:
+#   pnpm run verify-translation-pairing --write docs/upgrade-guide/v0.2.2-rc.3/map-refine-aoi-footprints/guide.md
+/:
+  en: 56e890422f292d4c
+  zh: bd1b22c21d67d448
+/map-refine-aoi-refines-aoi-candidates-with-building-footprints:
+  en: 24d0203cc6be5b67
+  zh: 75e21f4b8c2a9efe
+/map-refine-aoi-refines-aoi-candidates-with-building-footprints/change:
+  en: 961ec971c4d33882
+  zh: 08b31e7417f7844d
+/map-refine-aoi-refines-aoi-candidates-with-building-footprints/migration:
+  en: c2c38f610c829e2b
+  zh: 97bc640d0ab3d1ad

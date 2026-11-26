@@ -1,0 +1,17 @@
+{
+  "status": "recommended",
+  "type": "heatmap",
+  "nextTools": [
+    "layer_set_style"
+  ],
+  "analysisExecuted": false,
+  "data_profile": {
+    "distinctCountSemantics": "distinct, numericDistinct and ratio.distinct are capped at 2: 0 and 1 are exact; 2 means at least 2 distinct values, not an exact count.",
+    "featureCount": 8,
+    "geometry": [
+      "point"
+    ],
+    "fields": []
+  },
+  "rendered": "{\"schemaVersion\":1,\"scenario\":\"density\",\"status\":\"recommended\",\"primary\":{\"id\":\"heatmap\",\"label\":{\"en\":\"Screen-space heatmap\",\"zh\":\"屏幕热力图\"},\"family\":\"distribution\",\"purpose\":\"Explore concentration of observed points.\",\"geometry\":[\"point\"],\"scenarios\":[\"density\"],\"support\":\"native\",\"output\":\"layer\",\"requirements\":[\"weight\",\"2d\",\"unclassified\"],\"tools\":[\"layer_set_style\"],\"alternatives\":[\"kernel-density\",\"grid\"],\"limitations\":[\"Pixel-radius intensity varies with zoom; colors never establish statistical significance.\"],\"sources\":[\"https://github.com/visgl/deck.gl/tree/master/docs/api-reference/aggregation-layers\"],\"preconditions\":[\"Optional point weights must be finite and nonnegative on every observation.\",\"Heatmap presentation is supported in 2D MapView, not SceneView.\",\"Heatmap and classification styles are exclusive; do not silently clear an existing style.\"]},\"alternatives\":[\"kernel-density\",\"grid\"],\"gaps\":[],\"preconditions\":[\"Optional point weights must be finite and nonnegative on every observation.\",\"Heatmap presentation is supported in 2D MapView, not SceneView.\",\"Heatmap and classification styles are exclusive; do not silently clear an existing style.\"],\"nextTools\":[\"layer_set_style\"],\"warnings\":[\"Pixel-radius intensity varies with zoom; colors never establish statistical significance.\",\"Recommendation only; no analysis, significance test or map mutation has run.\"],\"analysisExecuted\":false,\"source\":{\"map_revision\":1,\"layer_id\":\"points\",\"resource_ref\":null,\"artifact_ref\":null,\"display_digest\":\"1e0672d0035398fc03e479087121520d88aca03e139aac2b778e6519eab2330b\",\"comparison_layer_id\":null},\"data_profile\":{\"distinctCountSemantics\":\"distinct, numericDistinct and ratio.distinct are capped at 2: 0 and 1 are exact; 2 means at least 2 distinct values, not an exact count.\",\"featureCount\":8,\"geometry\":[\"point\"],\"fields\":[]},\"methods\":[{\"id\":\"dot-density\",\"label\":{\"en\":\"Dot density\",\"zh\":\"点密度图\"},\"support\":\"unsupported\",\"output\":\"unavailable\"},{\"id\":\"heatmap\",\"label\":{\"en\":\"Screen-space heatmap\",\"zh\":\"屏幕热力图\"},\"support\":\"native\",\"output\":\"layer\"},{\"id\":\"kernel-density\",\"label\":{\"en\":\"Fixed-radius point density\",\"zh\":\"固定半径点密度\"},\"support\":\"derived\",\"output\":\"sampled-points\"}]}"
+}

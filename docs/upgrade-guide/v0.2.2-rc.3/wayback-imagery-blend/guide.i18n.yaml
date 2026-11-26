@@ -1,0 +1,16 @@
+# Bilingual-pair consistency record for guide.md (docs/i18n/README.md): per heading
+# section, a hash of its English and Chinese blocks outside code blocks and generated regions.
+# After editing either side, bring the other along and re-record with:
+#   pnpm run verify-translation-pairing --write docs/upgrade-guide/v0.2.2-rc.3/wayback-imagery-blend/guide.md
+/:
+  en: 8e6e2757d6d6f4d7
+  zh: 85713c85a2f65f8a
+/enabling-early-imagery-blends-an-opaque-recent-layer:
+  en: 13195be707246cc8
+  zh: 89b694ff6eb0162f
+/enabling-early-imagery-blends-an-opaque-recent-layer/change:
+  en: ca069045d01cae65
+  zh: 7403977ab45cb943
+/enabling-early-imagery-blends-an-opaque-recent-layer/migration:
+  en: 3fb0fe5b00f46867
+  zh: 5b998fbaabcd02b3

@@ -1,0 +1,69 @@
+{
+  "format": 2,
+  "serviceMode": "web",
+  "profile": "map-web",
+  "versionSource": "map/release/version.json",
+  "launchers": {
+    "posix": "start-web.sh",
+    "windows": "start-web.cmd"
+  },
+  "manifest": {
+    "file": "web-service-manifest.json",
+    "format": 1,
+    "targetDirectoryPattern": "^(?:mac|win|linux)-(?:x64|arm64)$",
+    "requiredTopLevelFields": [
+      "format",
+      "product",
+      "version",
+      "targets",
+      "supportedTargets",
+      "unsupportedTargets",
+      "files"
+    ],
+    "requiredFileFields": [
+      "path",
+      "role",
+      "target",
+      "executable",
+      "sha256"
+    ],
+    "releaseMatrix": {
+      "format": "map-harness-web-release-1",
+      "file": "web-service-release.json",
+      "checksums": "SHASUMS256.txt",
+      "targetSource": "scripts/primary-runtime/lock.json",
+      "archiveNames": {
+        "unix": "map-harness-v{version}-web-{target}.tar.gz",
+        "windows": "map-harness-v{version}-web-{target}.zip"
+      },
+      "manifestName": "map-harness-v{version}-web-{target}.manifest.json",
+      "qualificationName": "map-harness-v{version}-web-{target}.qualification.json",
+      "requiredTopLevelFields": [
+        "format",
+        "product",
+        "version",
+        "sourceDigest",
+        "targets",
+        "unsupportedTargets"
+      ],
+      "requiredTargetFields": [
+        "target",
+        "platform",
+        "architecture",
+        "abi",
+        "archive",
+        "archiveSha256",
+        "manifest",
+        "manifestSha256",
+        "qualification",
+        "qualificationSha256"
+      ]
+    }
+  },
+  "dataHome": {
+    "environment": [
+      "MAPHARNESS_HOME"
+    ],
+    "default": "~/.map-harness"
+  }
+}
