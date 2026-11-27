@@ -19,7 +19,7 @@
 
 `SYMBOL_PRESETS` 是稳定 id 的预设表（`preset:<name>`）：marker 形状 × 色板基准 × 尺寸/透明度档位、四种线型、含半透明与仅描边两种面层档位、两种热力图档位。预设是工具边界的显式 resolve 步骤：id 展开为完整符号后再校验。
 
-## 投影变更词（meta v8 / state v18）
+## 投影变更词（meta v8 / state v21）
 
 三个变更词折叠进单一 `mapContainer` 投影，走既有 CAS/配对/幂等/撤销纪律：
 
@@ -30,7 +30,7 @@
 - `set-basemap`：`{ selection: BasemapSelection | null }`。`null` 只表示回到历史固定底图，不伪装成显式来源；逆变更为先前选择，兼容性在折叠层再次校验。
 - `set-imagery-display`：`{ display: ImageryDisplayState }`。三层显隐、近期影像透明度 `[0,1]` 与固定早期 Wayback release；可见早期影像必须绑定固定 release，逆变更为先前显示状态。
 
-层记录新增 `symbol`、`overrides`、`group`、`imagery`，状态携带显式 `basemap`、`imageryDisplay` 与可选 `role`；`MAP_META_SCHEMA_VERSION` 8、`MAP_PROJECTION_STATE_VERSION` 18（旧缓存行弃置重折叠）。v1–v7 记录照常解码；`set-basemap`、`set-imagery-display` 与其新字段只属 v8，旧版本构建对 v8 只读拒绝。heatmap 与分类样式互斥、且要求全 Point 要素——工具与折叠双层拒绝。`role: 'user-annotation'` 只允许固定 `user-annotations` 层使用，普通模型变更词不得创建、替换、移动或移除该层。
+层记录新增 `symbol`、`overrides`、`group`、`imagery`，状态携带显式 `basemap`、`imageryDisplay` 与可选 `role`；`MAP_META_SCHEMA_VERSION` 8、`MAP_PROJECTION_STATE_VERSION` 21（旧缓存行弃置重折叠）。v1–v7 记录照常解码；`set-basemap`、`set-imagery-display` 与其新字段只属 v8，旧版本构建对 v8 只读拒绝。heatmap 与分类样式互斥、且要求全 Point 要素——工具与折叠双层拒绝。`role: 'user-annotation'` 只允许固定 `user-annotations` 层使用，普通模型变更词不得创建、替换、移动或移除该层。
 
 ## 工具面
 
@@ -38,7 +38,7 @@
 - `layer_set_style`（`layer_id`、`symbol|preset|auto` 三选一、`overrides?`、`expected_revision?`）：符号与覆盖同调时合成一个 patch、一个修订。与 `map_set_view` 同类：纯投影变更、不发布 artifact、无发布配对。
 - `map_set_imagery`（`labels_visible?`、`recent_visible?`、`recent_opacity?`、`early_visible?`、`early_release_id?`）：`early_release_id` 只接受官方固定 release，单独选择不自动显示，`null` 清除并同时关闭早期影像；`early_visible: true` 且未指定近期设置时，将可见且不透明度为 100% 的近期影像设为 50%，其余省略字段保持当前值。
 
-注册面六处：`a-index.ts` 工具清单、`map-container/src/tool-cards/` 展示字典条目、`mcp-service.ts` `LAYER_TOOL_NAMES` 家族、`spatial-catalog.ts` `layer-write` 家族与身份表、`protocol.ts` `MAP_MUTATION_TOOL_NAMES` 与词表白名单、`arcgis-mcp/src/catalog.ts` 的 `registerTool` 行（zod 入参与 `defineTool` 参数逐键对齐）。
+注册面见 [capability-index 的注册铁律](capability-index.md#注册铁律)：名册、身份行、直连 handler、MCP 声明、帧名册与文档六件套全部适用；layer 工具还须在 `map-container/src/tool-cards/` 补展示字典条目（工具卡片见 [map-container 会话工具卡片](../map-container/README.zh.md#会话工具卡片)）。
 
 既有 `spatial-collab` 的 `update-layer`/`upsert-layer` 保留为兼容路径：`update-layer` 展开 `...current` 天然保留新字段，`upsert-layer` 的整层重建按 id 从当前层保留 `symbol`/`overrides`/`group`；collab 词表不收窄、不改名。新代码只经新词表达状态变更。
 

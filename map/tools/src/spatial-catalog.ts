@@ -10,6 +10,8 @@
 import {
   MAP_META_KIND,
   MAP_META_SCHEMA_VERSION,
+  MAP_OBSERVATION_META_KIND,
+  MAP_OBSERVATION_SCHEMA_VERSION,
   AGENT_ANNOTATION_META_KIND,
   AGENT_ANNOTATION_SCHEMA_VERSION,
   MAP_MUTATION_TOOL_NAMES,
@@ -77,7 +79,7 @@ export type SpatialToolFamily =
 const NATIVE_ONLY_FAMILIES: readonly SpatialToolFamily[] = ['map-mutation', 'catalog-write', 'catalog-data', 'map-save', 'decision-write', 'run-submit', 'run-cancel', 'viz-style', 'layer-write', 'collab-write', 'terrain-display', 'stream-workbench', 'stream-materialize', 'scale-ingest', 'scale-scan', 'visual-change-read', 'visual-change-write']
 
 /** The durable meta kind one successful result of a tool carries. */
-export type SpatialMetaKind = 'map-use' | typeof AGENT_ANNOTATION_META_KIND | typeof VISUAL_PROPOSAL_META_KIND | typeof VISUAL_COMPARISON_META_KIND | typeof VISUAL_CHANGE_META_KIND | typeof MAP_META_KIND | typeof GEO_META_KIND | typeof CATALOG_META_KIND | typeof DATA_META_KIND | typeof MAP_SAVE_META_KIND | typeof DECISION_META_KIND | typeof RUN_META_KIND | typeof STAT_META_KIND | typeof DECISION_MODEL_META_KIND | typeof VIZ_META_KIND | typeof TERRAIN_META_KIND | typeof SCALE_META_KIND
+export type SpatialMetaKind = 'map-use' | typeof AGENT_ANNOTATION_META_KIND | typeof VISUAL_PROPOSAL_META_KIND | typeof VISUAL_COMPARISON_META_KIND | typeof VISUAL_CHANGE_META_KIND | typeof MAP_META_KIND | typeof MAP_OBSERVATION_META_KIND | typeof GEO_META_KIND | typeof CATALOG_META_KIND | typeof DATA_META_KIND | typeof MAP_SAVE_META_KIND | typeof DECISION_META_KIND | typeof RUN_META_KIND | typeof STAT_META_KIND | typeof DECISION_MODEL_META_KIND | typeof VIZ_META_KIND | typeof TERRAIN_META_KIND | typeof SCALE_META_KIND
 
 /** One row of the unified spatial tool catalog. */
 export interface SpatialToolIdentity {
@@ -107,7 +109,8 @@ const IDENTITY: Readonly<Record<SpatialToolName, Omit<SpatialToolIdentity, 'name
   map_list_basemaps: { family: 'map-read', owner: '@map-harness/map-tools', provider: '@map-harness/arcgis-mcp', metaKind: null, metaSchemaVersion: null },
   map_get_state: { family: 'map-read', owner: '@map-harness/map-tools', provider: '@map-harness/arcgis-mcp', metaKind: MAP_META_KIND, metaSchemaVersion: MAP_META_SCHEMA_VERSION },
   map_locate: { family: 'map-read', owner: '@map-harness/map-tools', provider: '@map-harness/arcgis-mcp', metaKind: MAP_META_KIND, metaSchemaVersion: MAP_META_SCHEMA_VERSION },
-  map_observe: { family: 'map-read', owner: '@map-harness/map-tools', provider: '@map-harness/arcgis-mcp', metaKind: MAP_META_KIND, metaSchemaVersion: MAP_META_SCHEMA_VERSION },
+  // map_observe carries the observation protocol meta: v1–v3 fixed-source, v4 with delegated vision analysis.
+  map_observe: { family: 'map-read', owner: '@map-harness/map-tools', provider: '@map-harness/arcgis-mcp', metaKind: MAP_OBSERVATION_META_KIND, metaSchemaVersion: MAP_OBSERVATION_SCHEMA_VERSION },
   map_compare_views: { family: 'visual-change-read', owner: '@map-harness/map-tools', provider: '@map-harness/arcgis-mcp', metaKind: VISUAL_COMPARISON_META_KIND, metaSchemaVersion: VISUAL_CHANGE_SCHEMA_VERSION },
   map_mark_changes: { family: 'visual-change-write', owner: '@map-harness/map-tools', provider: '@map-harness/arcgis-mcp', metaKind: VISUAL_CHANGE_META_KIND, metaSchemaVersion: VISUAL_CHANGE_SCHEMA_VERSION },
   map_use: { family: 'map-mutation', owner: '@map-harness/map-tools', provider: '@map-harness/arcgis-mcp', metaKind: 'map-use', metaSchemaVersion: 1 },

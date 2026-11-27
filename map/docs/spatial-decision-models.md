@@ -1,6 +1,6 @@
 # 空间决策模型层（spatial-decision）
 
-P3 决策模型层把「相关、模型解释、因果、预测、优化」分成五种互斥的结论形态，每种都自带前置条件、诊断、区间和诚实的降级标签。模型只经 `attribution_association`/`attribution_explain`/`attribution_effect`/`forecast_validate`/`forecast_fit`/`forecast_predict`/`scenario_compare`/`location_allocate` 八个普通 MCP 工具消费它；设计依据见空间决策架构 §6.2（归因/预测/决策工具）与 §12.2（统计、归因与预测约束）。本包是纯库：无 host 服务、无 profile 行，tools 直接 import；方法版本 `p3-spatial-decision@2` 固定全部公式，spec 摘要键序无关。
+决策模型层把「相关、模型解释、因果、预测、优化」分成五种互斥的结论形态，每种都自带前置条件、诊断、区间和诚实的降级标签。模型只经 `decision-model` 家族的八个工具消费它（名单见[能力索引](capability-index.md)）。本包是纯库：无 host 服务、无 profile 行，tools 直接 import；方法版本 `p3-spatial-decision@2` 固定全部公式，spec 摘要键序无关。
 
 ## 方法契约（`contract.ts`）
 
@@ -30,11 +30,11 @@ P3 决策模型层把「相关、模型解释、因果、预测、优化」分�
 
 ## 接入
 
-- 工具：`map/tools` 的 `decision-model-tools.ts` 解析 catalog 版本字节 → 解析 spec（默认值显式写入）→ 校验 → 经 `requirePendingPublish` 的已接受调用配对发布 artifact（scenario_compare 为纯内联输入，不发布 artifact、不要求配对）→ 携带 `spatial-decision` 持久 meta（v1：工具、状态、claim level、方法版本、spec 摘要、headline、artifact refs、限制文案）；身份表八行 `family: 'decision-model'`，与 `catalog_register`/`geo_buffer`/`stats_*` 同列 `PUBLISH_TOOL_NAMES` 配对投影。
+- 工具：`map/tools` 的 `decision-model-tools.ts` 解析 catalog 版本字节 → 解析 spec（默认值显式写入）→ 校验 → 经 `requirePendingPublish` 的已接受调用配对发布 artifact（scenario_compare 为纯内联输入，不发布 artifact、不要求配对）→ 携带 `spatial-decision` 持久 meta（v1：工具、状态、claim level、方法版本、spec 摘要、headline、artifact refs、限制文案）；身份归 `decision-model` 家族（见[能力索引](capability-index.md)），与 `catalog_register`/`geo_buffer`/`stats_*` 同列 `PUBLISH_TOOL_NAMES` 配对投影。
 - 门禁归属见 [verification-matrix](verification-matrix.md) 的 `spatial-decision/` owner 行。
 
 ## 限制
 
 - 因果识别与公平权重包含领域判断：机器校验只报告条件，不替用户做价值决定；权重的默认情景是显式标记的取值，不是客观最优。
-- 本部署无工作区内成熟因果/预测依赖；交叉验证采用解析小样例、已发表分位数表、独立复算与包内第二实现对照；外部 provider 接入属后续阶段（设计 §13.1）。
-- 预测模型限于线性、单阈值和二次岭三族；大规模分布式训练、实时反馈评价按设计 §3.2 的独立发布条件扩展。
+- 本部署无工作区内成熟因果/预测依赖；交叉验证采用解析小样例、已发表分位数表、独立复算与包内第二实现对照；外部 provider 接入不在本包范围。
+- 预测模型限于线性、单阈值和二次岭三族；大规模分布式训练与实时反馈评价按独立的发布条件扩展。

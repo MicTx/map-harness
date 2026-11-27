@@ -1,6 +1,6 @@
 # 大规模分布式数据通道（spatial-scale@1）
 
-本文是大规模数据通道能力的现行契约：版本化 `spatial-scale@1` 方法、不可变分块对象 provider（GeoParquet 风格 row-group，逐块 sha256 摘要与 bbox 索引）、有界 range/tile/query 读取、worker 子进程扫描平面（槽位背压、取消静止、超时不伪装、暂存资源全路径清理）、发布与溯源（暂存→校验→accepted-call 配对发布→引用）、以及固定 workload 基准（实测记录阈值）。设计依据：空间决策架构（「大数据不会通过模型 JSON 或单进程内存无界搬运」）与审计结论（「性能阈值用固定硬件/数据基准确定，不能用文档承诺替代测量」）。
+本文是大规模数据通道能力的现行契约：版本化 `spatial-scale@1` 方法、不可变分块对象 provider（GeoParquet 风格 row-group，逐块 sha256 摘要与 bbox 索引）、有界 range/tile/query 读取、worker 子进程扫描平面（槽位背压、取消静止、超时不伪装、暂存资源全路径清理）、发布与溯源（暂存→校验→accepted-call 配对发布→引用）、以及固定 workload 基准（实测记录阈值）。
 
 ## 范围与不承诺
 
@@ -8,10 +8,10 @@
 
 **不做什么**：
 
-- 不接 PostGIS/对象存储/COG 真实服务：首期唯一 provider 是本地分块对象 store（`map/spatial-catalog` store 根下的 `scale/` 区）；真实连接器按部署输入另行发布。
+- 不接 PostGIS/对象存储/COG 真实服务：当前唯一 provider 是本地分块对象 store（`map/spatial-catalog` store 根下的 `scale/` 区）；真实连接器按部署输入另行发布。
 - 不承诺跨系统原子性：发布顺序是暂存 → 校验（digest+行数）→ 提交（manifest 最后落盘）→ 引用；文件与目录是两个系统，失败各自治愈，孤儿暂存按路径清理。
 - 不承诺恰好一次网络执行：worker 至少一次运行，崩溃/超时不认领结果，游标+续跑重放保证结论一致。
-- 不建设通用集群/队列/SQL 平台：没有 workload 证据不平台化（spec §3.3）。
+- 不建设通用集群/队列/SQL 平台：没有 workload 证据不平台化。
 - 大数据不进模型通道：模型摘要按构造有界（计数/聚合/游标），行载荷只进产物与封顶样本。
 
 ## 不可变版本（ingest）

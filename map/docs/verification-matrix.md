@@ -2,7 +2,7 @@
 
 本文是 map 层跨包验证的权威矩阵：每个领域/工程包的测试层映射、owner、focused 命令与 out-of-scope 记录，以及 snapshot/GUI/expected/benchmark/CI 门禁的归属和刷新规则。逐套件命令与发布流程见 [engineering.md](engineering.md)；本文回答的问题是「哪类行为变更必须由哪层证据击穿回归，当前哪层还没有证据、为什么」。
 
-范围依据：`.spec/specs/2026-09-24_add-spatial-verification-gates/spec.md`（验证门禁包）与 `.spec/docs/2026-09-23_docs-spatial-agent-architecture_design.md`（P0a→P3 阶段所有者）。分层词汇沿用仓库 [docs/testing.md](../../docs/testing.md)。
+范围：`map/` 自有层；分层词汇沿用仓库 [docs/testing.md](../../docs/testing.md)。
 
 ## 机器门禁
 
@@ -16,7 +16,7 @@
 
 ## 设施选址跨模块验收
 
-[设施选址案例](facility-decision-acceptance.md)由 `map/tools/tests/facility-decision.spec.mjs` 验证受控网络覆盖 150/350 与 200/350、实测指标驱动的候选比较、图层图例色块/属性表/导出版本一致、真实 JSONL/SQLite 关闭后恢复及拒绝路径。`snapshots/session/map-facility-decision` 保存真实 DeepSeek Flash 的调用与报告，keyless 回放仍执行真实工具；`map/arcgis-mcp/tests/composition.e2e.mjs` 的 `facility decision` 用例验证 GUI 数值、联动、导出、重载和 rendered 回执，默认模型回放，`MAP_FACILITY_LIVE=1` 另验真实模型。该场景保留 V4 录制作为 `behavior-baseline`，并以独立 writer oracle 固定当前输出及请求 header；`replay.override.json` 绑定运行时身份。
+[设施选址案例](facility-decision-acceptance.md)由 `map/tools/tests/facility-decision.spec.mjs` 验证受控网络覆盖 150/350 与 200/350、实测指标驱动的候选比较、图层图例色块/属性表/导出版本一致、真实 JSONL/SQLite 关闭后恢复及拒绝路径。`snapshots/session/map-facility-decision` 保存真实 DeepSeek Flash 的调用与报告，keyless 回放仍执行真实工具；`map/arcgis-mcp/tests/composition.e2e.mjs` 的 `spatial workflow: facility coverage comparison reaches the map, linked table and export` 用例验证 GUI 数值、联动、导出、重载和 rendered 回执，默认模型回放，`MAP_FACILITY_LIVE=1` 另验真实模型。该场景保留 DeepSeek 录制作为 `behavior-baseline`，并以独立 writer oracle 固定当前输出及请求 header；`replay.override.json` 绑定运行时身份。
 
 ## 图层工作台跨模块验收
 
@@ -27,7 +27,7 @@
 ### `map-container/`（node 半：projection/protocol/`ctx.map` 服务）
 
 - unit: `map/map-container/tests/artifact-route.spec.mjs` 制品下载路由（精确 `res-…@vN`/`art-…@vN` 白名单、`forSession` 授权面、octet-stream 流与 digest 一致字节、未知会话/未知或松散 ref/未授权/摘要不符五路 fail closed、无 Connection 不挂载）；`map/map-container/tests/projection.spec.mjs` 提交协议 decode/validate/settle、plain-JSON 状态、负向准入；`map/map-container/tests/observation.spec.mjs` 观察认领/提交生命周期（claim 令牌配对、早认领泊车、超时/取消/废弃、错误令牌/会话/修订拒绝、real PNG 解码准入界）与 latestObservation 折叠；来源集合严格校验默认可见 AMap 注记、显式 labels:null、零透明度隐藏源、配置漂移和 typed 失败不透传 stale；`map/map-container/tests/layer-state.spec.mjs` 三个呈现变更词（set-layer-state/set-symbol-style/set-feature-overrides）的 decode→validate→settle 正负路径、v5 版本门（v4 记录携新词/新字段只读拒绝）、撤销往返（先前可见性/符号/覆盖）、patch 组合、operationId 幂等、`feature-unknown` 零残留、imagery 层 add/remove/重放与 v8 缓存行弃置
-- unit: `map/map-container/tests/basemap-state.spec.mjs` 覆盖 `set-basemap` CAS/并发/撤销、meta v7 与旧版本读取边界、state v14 显式选择及来源身份漂移拒绝；`map/map-container/tests/imagery-display-state.spec.mjs` 覆盖 `set-imagery-display` 默认值、CAS/幂等/撤销、meta v8 门与 state v18 缓存行弃置；`map/map-container/tests/source-overlay-render.spec.mjs` 覆盖早期影像在下、近期影像在上的叠放顺序与 source digest 身份；`map/map-container/tests/annotation-state.spec.mjs` 覆盖用户标记 create/update/delete/undo 折叠、宿主派生 id、v3 通知、幂等重试、补偿逆快照、feature 级 stale CAS、撤销候选超出 12 条摘要窗、checkpoint tail/full 重放、CAS 后置摘要、旧版本只读边界与模型词表保护；`map/map-container/tests/visual-proposal-protocol.spec.mjs` 覆盖候选记录有界解析、非概率自评、版本化 meta 拒绝未知版本；`map/map-container/tests/visual-proposal-math.spec.mjs` 用独立控制点证明点/线/面/bbox 四角同一 affine 变换并拒绝署名区/自交/跨经线；`map/map-container/tests/visual-change-protocol.spec.mjs` 覆盖两观察 identity、有界 history/comparison、共同视角与固定 release 日期、旧 checkpoint refold 和未知 meta 版本拒绝
+- unit: `map/map-container/tests/basemap-state.spec.mjs` 覆盖 `set-basemap` CAS/并发/撤销、meta v8 门与 v6 兼容读取、v1–v5 对新词的只读拒绝、显式 `basemap` 默认值与旧缓存行拒绝及来源身份漂移拒绝；`map/map-container/tests/imagery-display-state.spec.mjs` 覆盖 `set-imagery-display` 默认值、CAS/幂等/撤销、meta v8 门与 v1–v7 旧变更词读取；`map/map-container/tests/source-overlay-render.spec.mjs` 覆盖早期影像在下、近期影像在上的叠放顺序与 source digest 身份；`map/map-container/tests/annotation-state.spec.mjs` 覆盖用户标记 create/update/delete/undo 折叠、宿主派生 id、v3 通知、幂等重试、补偿逆快照、feature 级 stale CAS、撤销候选超出 12 条摘要窗、checkpoint tail/full 重放、CAS 后置摘要、旧版本只读边界与模型词表保护；`map/map-container/tests/visual-proposal-protocol.spec.mjs` 覆盖候选记录有界解析、非概率自评、版本化 meta 拒绝未知版本；`map/map-container/tests/visual-proposal-math.spec.mjs` 用独立控制点证明点/线/面/bbox 四角同一 affine 变换并拒绝署名区/自交/跨经线；`map/map-container/tests/visual-change-protocol.spec.mjs` 覆盖两观察 identity、有界 history/comparison、共同视角与固定 release 日期、旧 checkpoint refold 和未知 meta 版本拒绝
 - unit: `map/map-container/tests/interaction-protocol.spec.mjs` 覆盖 interaction schema、动作/观察计费、`finish` 不计动作与预算快照；`map/map-container/tests/interaction-projection.spec.mjs` 覆盖显式 turn 起点、重复/倒退 start 拒绝、20/21 尝试边界、119999/120000ms 边界、时钟回拨与请求/地图同快照；`map/map-container/tests/interaction.spec.mjs` 覆盖 claim token、early claim、服务端截止裁决、超时/取消、错误 token、有界流读取与卸载后零迟到停止通知；`map/map-container/tests/map-use-math.spec.mjs` 覆盖平移方向、锚点缩放、点击像素/署名区、WGS84 反投影、参数排他性与命中字段白名单
 - unit: `map/map-container/tests/wayback-service.spec.mjs` 覆盖官方目录排序、发布日期与拍摄日期分离、局部证据、缓存及取消，并证明同日期但 provider/resolution/accuracy 不一致判 `partial`、刷新失败保留上次已验证 release、metadata 读取携带已验证目录身份且拒绝身份漂移（身份绑定各自不可变目录快照，并发新旧代交错时 in-flight 旧快照不串用新代身份，coverage 串行样本同代）；`map/map-container/tests/wayback-worker.spec.mjs` 覆盖受控 worker、瓦片失败、A-B-A 重复影像折叠、相同像素不同编码及透明像素去重、A-B-C-B 最新候选、畸形 tilemap 拒绝、目录快照漂移映射 `SOURCE_CHANGED`、256 个发布版本的请求预算、上游错误不写入宿主日志、取消与卸载，以及 transport 拒绝官方库会静默过滤的目录条目、畸形 metadata 体（含数组 `attributes`）、身份不匹配的 metadata 读取和非图片对照瓦片；`map/map-container/tests/wayback-state.spec.mjs` 覆盖固定版本恢复、比较候选持久化、权限和视窗竞态；`map/map-container/tests/wayback-source.spec.mjs` 覆盖固定 release capabilities、同源资源、五点日期与覆盖采样、缺失/unknown、取消、直调 `waybackLocal` 按 Wayback 声明预算共享总 deadline 及跨会话身份隔离。
 - unit: `map/map-container/tests/source-network-proxy.spec.mjs` 覆盖显式出站代理配置（`urlEnv`/`targetResolution`、非 `DSH_` 环境名拒绝、非法值与缺环境变量拒绝）、CONNECT 仅 200 放行且拒绝无直连回退、超大响应头拒绝、stalled/abort/dispose 关闭隧道、TLS 仍按原 hostname 校验、凭据不进配置序列化/错误文本/资源 URL、未显式配置时环境 `HTTPS_PROXY` 不生效。
@@ -39,7 +39,7 @@
 - layout: `map/map-container/tests/feature-card-anchor.spec.mjs`、`map/map-container/tests/feature-card-integration.spec.mjs`、`map/map-container/tests/feature-card-placement.spec.mjs`（卡片锚点与要素集成）、`map/map-container/tests/annotation-layout.spec.mjs`（绘制工具栏单条标注工具列与 more 菜单）、`map/map-container/tests/feature-card-layout.spec.mjs`（要素卡片头与面板头骨架一致）、`map/map-container/tests/imagery-layout.spec.mjs`（影像资源单页签区族）、`map/map-container/tests/layer-panel-layout.spec.mjs`（空态归属图层列表区）、`map/map-container/tests/unified-panel-sections.spec.mjs`（统一常驻卡片承载三个可折叠分节、无 tablist/launcher）、`map/map-container/tests/panel-drag.spec.mjs`（常驻卡片头部指针拖拽、位移阈值与边界）
 - ops: `map/map-container/tests/plugin.spec.mjs` dispose/重挂载折叠语义（HMR）
 
-- owner: map-container 包（P0a 状态与协议基础）
+- owner: map-container 包（状态与协议基础）
 - command: `pnpm --filter @map-harness/map-container run test`
 - suites: `map/map-container/tests/projection.spec.mjs`, `map/map-container/tests/observation.spec.mjs`, `map/map-container/tests/interaction-protocol.spec.mjs`, `map/map-container/tests/interaction-projection.spec.mjs`, `map/map-container/tests/interaction.spec.mjs`, `map/map-container/tests/map-use-math.spec.mjs`, `map/map-container/tests/layer-state.spec.mjs`, `map/map-container/tests/basemap-state.spec.mjs`, `map/map-container/tests/imagery-display-state.spec.mjs`, `map/map-container/tests/source-overlay-render.spec.mjs`, `map/map-container/tests/annotation-state.spec.mjs`, `map/map-container/tests/annotation-pending.spec.mjs`, `map/map-container/tests/sources.spec.mjs`, `map/map-container/tests/source-cache-policy.spec.mjs`, `map/map-container/tests/source-cache.spec.mjs`, `map/map-container/tests/source-image.spec.mjs`, `map/map-container/tests/source-mapserver.spec.mjs`, `map/map-container/tests/source-network.spec.mjs`, `map/map-container/tests/source-network-proxy.spec.mjs`, `map/map-container/tests/source-render-protocol.spec.mjs`, `map/map-container/tests/source-resource.spec.mjs`, `map/map-container/tests/source-route.spec.mjs`, `map/map-container/tests/source-scope.spec.mjs`, `map/map-container/tests/source-service.spec.mjs`, `map/map-container/tests/source-wmts.spec.mjs`, `map/map-container/tests/plugin.spec.mjs`, `map/map-container/tests/artifact-route.spec.mjs`, `map/map-container/tests/occurrence.spec.mjs`, `map/map-container/tests/final-state-restore.spec.mjs`, `map/map-container/tests/view-policy.spec.mjs`, `map/map-container/tests/state.spec.mjs`, `map/map-container/tests/default-open.spec.mjs`, `map/map-container/tests/wayback-service.spec.mjs`, `map/map-container/tests/wayback-worker.spec.mjs`, `map/map-container/tests/wayback-state.spec.mjs`, `map/map-container/tests/wayback-source.spec.mjs`, `map/map-container/tests/visual-proposal-protocol.spec.mjs`, `map/map-container/tests/visual-proposal-math.spec.mjs`, `map/map-container/tests/visual-change-protocol.spec.mjs`, `map/map-container/tests/visual-change-ui.spec.mjs`, `map/map-container/tests/feature-card-anchor.spec.mjs`, `map/map-container/tests/feature-card-integration.spec.mjs`, `map/map-container/tests/feature-card-placement.spec.mjs`
 - out-of-scope: 持久化 renderedRevision 回执已于 2026-10-07 交付（occurrence 级 applied/rendered/failed，见 `map-container/` browser 半 owner 行与 [map-container-binding.md](map-container-binding.md)「渲染回执」）；浏览器真实渲染画面由 composition lane 的像素用例覆盖
@@ -60,8 +60,8 @@
 - unit: `map/map-container/tests/user-change.spec.mjs` 验证用户变更接纳、`set-view` v8 编解码、即时折叠及按 operationId 幂等；`map/map-container/tests/camera-persistence.spec.mjs` 验证静止相机的持久化提交；`map/map-container/tests/panel.spec.mjs` 验证面板操作、pending 结算和派生；`map/map-container/tests/gesture.spec.mjs` 验证手势归因、限频和程序化静音；`map/map-container/tests/occurrence.spec.mjs` 验证每个具体视图的相机结算、替换隔离和渲染回执顺序。
 - integration: `map/arcgis-mcp/tests/composition.e2e.mjs` 用固定瓦片和模型替身跑真实 Loader、Session 与 ArcGIS，覆盖视图复用、离线提示下本机重连、最终相机和图层状态恢复、拖拽与滚轮后的视窗上报、面板用户直写、标记绘制及导出、连续观察与地图操作、自主导入、分类色块与画布像素、下载和 POI 失败。共享 consumer 的代际与卸载由 `packages/api/session-controller/tests/client-apply.client.spec.ts` 验证。
 - Loader: `map/tests/built-smoke.spec.mjs` `lib/client.js` closure-factory banner（Web module loader 真实消费形态）
-- snapshot: `map/arcgis-mcp/tests/expected/session-map.json` 由 `facility decision` 真实 Web 用例消费：重放 `snapshots/session/map-facility-decision` 的已录制模型决策，执行真实工具并比对对话入口、唯一地图页签/画布/引擎与 sessionId 绑定；fixture 显式使用 controlled-lattice 和固定瓦片，不继承部署的路网供应商。像素分类仍归 `rendered pixels` 用例
-- numeric: none — 浏览器半不承载解析数值；投影换算由 ArcGIS 引擎承担，归属 D09 数值语义 owner 审计；手势观察仅携带相机摘要（display WKID 自描述），不做坐标换算声明
+- snapshot: `map/arcgis-mcp/tests/expected/session-map.json` 由 `spatial workflow: facility coverage comparison reaches the map, linked table and export` 真实 Web 用例消费：重放 `snapshots/session/map-facility-decision` 的已录制模型决策，执行真实工具并比对对话入口、唯一地图页签/画布/引擎与 sessionId 绑定；fixture 显式使用 controlled-lattice 和固定瓦片，不继承部署的路网供应商。像素分类仍归 `rendered pixels` 用例
+- numeric: none — 浏览器半不承载解析数值；投影换算由 ArcGIS 引擎承担，归属数值语义 owner；手势观察仅携带相机摘要（display WKID 自描述），不做坐标换算声明
 - perf: none — 帧预算未建立；见 out-of-scope 表
 - ops: `map/map-container/tests/occurrence-lifecycle.spec.mjs` 取消加载、部分挂载失败清理和重试；`default-open.spec.mjs` 默认打开、提交后协调、重复页签收敛、会话隔离及 dispose；手势拒绝语义见 gesture.spec
 - unit: `map/map-container/tests/mapbox-control-css.spec.mjs` 以官方 `mapbox-gl@3` CSS 离线副本逐字节钉住 `mapboxgl-ctrl-group` 几何（32px 按钮、4px 圆角、2px rgba 外圈、#ddd 分隔、#eee hover、#0096ff focus）与五个 `mapbox-ctrl` SVG data URI；`map/map-container/tests/mapbox-control-api.spec.mjs` 覆盖 `MapOccurrence.zoomBy`/`resetBearing`/`mapControlState` 的 no-view 拒绝、步长 clamp 与 scale 回退；`map/map-container/tests/mapbox-controls.spec.mjs` 覆盖四组控件 DOM、图标槽、相机接线、罗盘旋转与紧凑归属展开；`map/map-container/tests/mapbox-controls-mount.spec.mjs` 锁定挂载点与指针穿透；`map/map-container/tests/mapbox-controls-browser.spec.mjs` 在真实 Chromium 1280/390 下读取计算样式并真实点击缩放、罗盘与归属，另产出 `mapbox-ctrl` 截图; `map/map-container/tests/layer-panel-layout.spec.mjs` 钉住 `data-mapbox-panel-row` 的 Studio 行解剖与共享几何
@@ -72,7 +72,7 @@
 - suites (camera and restore): `map/map-container/tests/camera-persistence.spec.mjs`, `map/map-container/tests/final-state-restore.spec.mjs`
 - suites (feature card): `map/map-container/tests/feature-card-anchor.spec.mjs`, `map/map-container/tests/feature-card-integration.spec.mjs`, `map/map-container/tests/feature-card-layout.spec.mjs`, `map/map-container/tests/feature-card-placement.spec.mjs`
 - suites (layer panel): `map/map-container/tests/layer-panel-layout.spec.mjs`, `map/map-container/tests/panel-drag.spec.mjs`, `map/map-container/tests/unified-panel-sections.spec.mjs`
-- out-of-scope: 两条后续项均已交付（2026-10-07）——渲染回执 API（设计 §10.4/§11.2 的 occurrence 级 applied/rendered/failed，含 revision/viewId/失败图层与迟到完成拒绝，经客户端 store 持久化）与像素级画面验证（`pnpm --filter @map-harness/arcgis-mcp run test:composition` 的 `rendered pixels` 用例断言分类图层在 2D 画布上色、切换 3D 场景后保持、移除后清空，并以图例（同一样式版本）的最暗类色为基准）；浏览器手势写通道已交付（设计 §11.1/§11.2：手势作为用户输入经 session prompt 命令入会话队列，运行中限频 steer、显式提交 queue，空闲保持本地草稿，程序化相机变更零观察；随消息附带需接管上游 composer，记为后续项）；`failIfMajorPerformanceCaveat` 的严格 WebGL2 与运行前置见 [engineering.md](engineering.md)「平台限制」
+- out-of-scope: 本矩阵不覆盖 `failIfMajorPerformanceCaveat` 的严格 WebGL2 与运行前置（见 [engineering.md](engineering.md)「平台限制」）。
 
 ### `layers/`（图层呈现契约纯库：SymbolStyle/FeatureOverride/ImagerySpec/自动配色/预设）
 
@@ -91,11 +91,11 @@
 
 ### `tools/`（map_* 容器工具 + 内部 MCP adapter）
 
-- unit: `map/tools/tests/map-tools.spec.mjs` 工具定义/工作区绑定/错误面；`map/tools/tests/layer-tools.spec.mjs` `layer_set_state`/`layer_set_style` 真实 Session+投影链路（批量单修订、expected_revision 过期、取消零变更、预设/auto 展开与透明度档位、覆盖未知 id 拒绝、heatmap 非点/已分类拒绝、collab upsert/update 保留呈现字段、tile_url 准入与凭据/query/userinfo 拒绝、imagery 层入投影与 wire）；`map/tools/tests/catalog-chain.spec.mjs` P0b 链路（真实 catalog 服务）
+- unit: `map/tools/tests/map-tools.spec.mjs` 工具定义/工作区绑定/错误面；`map/tools/tests/layer-tools.spec.mjs` `layer_set_state`/`layer_set_style` 真实 Session+投影链路（批量单修订、expected_revision 过期、取消零变更、预设/auto 展开与透明度档位、覆盖未知 id 拒绝、heatmap 非点/已分类拒绝、collab upsert/update 保留呈现字段、tile_url 准入与凭据/query/userinfo 拒绝、imagery 层入投影与 wire）；`map/tools/tests/catalog-chain.spec.mjs` catalog 链路（真实 catalog 服务）
 - unit: `map/tools/tests/basemap-admission.spec.mjs` + `basemap-tools.spec.mjs` 覆盖模型自动化许可、目录/兼容性/并发修订检查与两个底图工具双入口语义；`basemap-tools.spec.mjs` 另覆盖 `map_set_imagery` 的省略保持、三层显隐/透明度折叠、固定 release 选择与清除、许可/参数拒绝；`map/tools/tests/mcp-tools.spec.mjs` 与 `presentation.spec.mjs` 覆盖 `map_set_imagery` 的 MCP 目录身份与展示字典；`map/tools/tests/annotation-protection.spec.mjs` 覆盖 map_draw/patch/remove/undo 与协同入口命名 `user-annotations` 的准入拒绝、annotation-only GeoJSON 导出冻结 revision/source 元数据/白名单属性与跨会话制品解析拒绝
 - unit: `map/tools/tests/map-use.spec.mjs` 覆盖 `map_use` 单动作解析、observation 消费、候选接受/接管先后顺序、SDK 返回值的宿主派生、stale/非 affine/来源拒绝、中途撤权、默认截图拒绝、动作/观察预算、伪造通知、旧/未来缓存重折叠、checkpoint/full replay 与 `finish` 边界；`map/tools/tests/visual-observation.spec.mjs` 覆盖 `map_observe` 每 turn 观察预算，并锁定默认可见 AMap 注记的完整来源列表、截图授权与部署 capturePolicy 分离、隐藏/零透明来源不参与、显式 labels-off 不继承默认授权、来源配置 typed 失败和附件保存后配置 drift；`map/tools/tests/map-markup.spec.mjs` 覆盖 `map_markup` 的会话/观察配对、持久附件摘要复核、独立 WGS84 投影、跨会话/过期/非 affine/恶意输入拒绝、一次折叠与重复结果零残留；`map/tools/tests/visual-change-tools.spec.mjs` 用 sharp 真 PNG 覆盖双图顺序、固定 release/来源/sha256 复核、共同 affine、comparison/candidate meta、单一候选上限、取消/伪造字节/未知 comparison/重复批次不落盘
 - unit: `map/tools/tests/refine-tools.spec.mjs` 覆盖 `map_refine_aoi`：真实足迹替换矩形候选并按排序选取与署名，空结果与来源失败保留原候选，目录身份行与 map change 许可一致
-- integration: `map/arcgis-mcp/tests/arcgis-mcp.spec.mjs` catalog↔handler、execution token 绑定；`map/tools/tests/run-tools.spec.mjs` P1 run_submit/get/cancel 链路（真实 catalog+accessibility 服务；`properties.id` 绑定、跨资源位置回退、显式 id 冲突拒绝、`run_get` 具名计算诊断）；`map/tools/tests/layer-workbench.spec.mjs` P4 跨工具联动链（导入确认两段→resolve→成层→样式/状态→导出 digest→保存→关闭重开恢复；畸形导入零残留、过期修订拒绝、revoked 源导出拒绝）
+- integration: `map/arcgis-mcp/tests/arcgis-mcp.spec.mjs` catalog↔handler、execution token 绑定；`map/tools/tests/run-tools.spec.mjs` run_submit/get/cancel 链路（真实 catalog+accessibility 服务；`properties.id` 绑定、跨资源位置回退、显式 id 冲突拒绝、`run_get` 具名计算诊断）；`map/tools/tests/layer-workbench.spec.mjs` 跨工具联动链（导入确认两段→resolve→成层→样式/状态→导出 digest→保存→关闭重开恢复；畸形导入零残留、过期修订拒绝、revoked 源导出拒绝）
 - Loader: `map/tests/loader-smoke.spec.mjs` native 工具面组合；`map/tests/built-smoke.spec.mjs` `tools/lib/mcp.js` 入口
 - snapshot: `snapshots/session/map-analyst-turn`（keyed 已建立）：map_* 工具 schema 全量进入录制 pin 头，map_add_layer 真实调用链录制并 keyless 回放（见「门禁归属」）
 - snapshot: `map/tools/tests/expected/map-use.json` 由 `map-use.spec.mjs` 的真实 Session 调用固定相机候选输出，明确 `status: candidate` 和 `rendered: false`；不是模型视觉决策录制
@@ -106,7 +106,7 @@
 - owner: map-tools 包
 - command: `pnpm --filter @map-harness/map-tools run test`
 - suites: `map/tools/tests/map-tools.spec.mjs`, `map/tools/tests/basemap-admission.spec.mjs`, `map/tools/tests/basemap-tools.spec.mjs`, `map/tools/tests/annotation-protection.spec.mjs`, `map/tools/tests/presentation.spec.mjs`, `map/tools/tests/layer-tools.spec.mjs`, `map/tools/tests/layer-workbench.spec.mjs`, `map/tools/tests/mcp-tools.spec.mjs`, `map/tools/tests/catalog-chain.spec.mjs`, `map/tools/tests/import-csv.spec.mjs`, `map/tools/tests/import-kml.spec.mjs`, `map/tools/tests/import-shapefile.spec.mjs`, `map/tools/tests/import-admission.spec.mjs`, `map/tools/tests/data-import.spec.mjs`, `map/tools/tests/data-serialization.spec.mjs`, `map/tools/tests/data-export.spec.mjs`, `map/tools/tests/data-discovery.spec.mjs`, `map/tools/tests/online-discovery.spec.mjs`, `map/tools/tests/online-discovery-live.spec.mjs`, `map/tools/tests/map-workflow.spec.mjs`, `map/tools/tests/source-method-parity.spec.mjs`, `map/tools/tests/visual-observation.spec.mjs`, `map/tools/tests/map-use.spec.mjs`, `map/tools/tests/map-markup.spec.mjs`, `map/tools/tests/visual-change-tools.spec.mjs`, `map/tools/tests/spatial-workflow.spec.mjs`, `map/tools/tests/geo.spec.mjs`, `map/tools/tests/numeric-answers.spec.mjs`, `map/tools/tests/run-tools.spec.mjs`, `map/tools/tests/stat-tools.spec.mjs`, `map/tools/tests/viz-tools.spec.mjs`, `map/tools/tests/capability-index.spec.mjs`
-- out-of-scope: 向量检索、外部知识图谱和独立语义服务（本轮只交付关系表、关键词/别名检索与现有 `catalog_resolve` 接线）
+- out-of-scope: 向量检索、外部知识图谱和独立语义服务（当前只覆盖关系表、关键词/别名检索与现有 `catalog_resolve` 接线）
 
 ### `tools/`（geo_* 空间分析与数值）
 
@@ -118,10 +118,10 @@
 - perf: none — Turf 计算在资源限流内同步完成；无独立预算
 - ops: `map/arcgis-mcp/tests/lifecycle.spec.mjs` geo 在途取消/dispose
 
-- owner: map-tools 包（D09 数值语义的现行实现面）
+- owner: map-tools 包（数值语义的现行实现面）
 - command: `pnpm --filter @map-harness/map-tools run test`
 - suites: `map/tools/tests/geo.spec.mjs`, `map/tools/tests/numeric-answers.spec.mjs`
-- out-of-scope: Point/LineString 求面积改为拒绝、边界接触拓扑判定（D09 审计项）——模型可见语义变更，归 P0b 数值语义 owner 并需快照级证据；本包以「published limitations 披露守卫」钉住现状
+- out-of-scope: Point/LineString 求面积改为拒绝、边界接触拓扑判定（数值语义审计项）——模型可见语义变更，归 map-tools 数值语义 owner 并需快照级证据；本包以「published limitations 披露守卫」钉住现状
 
 ### `arcgis-mcp/`（进程内 MCP server/provider）
 
@@ -131,7 +131,7 @@
 - integration: `composition.e2e.mjs` 的 `map use: render-wait` 用瓦片加载barrier保持已接受修订未rendered，证明省略expected_revision的观察不会提前提交截图，释放后才发布新修订图像；工具单测补齐来源/候选/接管后版本区别、旧结果文本重放及turn截止对较长捕获窗口的约束
 - integration: `map/arcgis-mcp/tests/composition.e2e.mjs` 的 `map use replay:` 从隔离的受控模型原生 Session 派生脚本，在第二个真实客户端核对图像摘要、修订、控制点、点击与重启恢复；该测试不证明真实模型视觉决策，也不是仓库持久 recorded-session snapshot
 - integration: 同上 execution token 绑定真实 `ToolExecution` 会话；`lifecycle.spec.mjs` 真实插件挂载；`map/arcgis-mcp/tests/composition.e2e.mjs` 的 `map observation` 用例通过测试 Loader、真实 ArcGIS SDK、生成瓦片与 fixture-owned 本地模型验证 revision 0/2 截图及原生 inline image tool_result，`map basemap` 用例验证受控来源、面板注记、模型状态读取与第二 Loader replay
-- integration (keyless): `map/arcgis-mcp/tests/composition.e2e.mjs` 的 `map compare`/`map change` 目录用例在真实 Web Loader 的主模型请求里核对两工具挂载及其 schema；`map/arcgis-mcp/tests/arcgis-mcp.spec.mjs` 用 runtime.service 真调用验证 `map_compare_views` 的两个 `resource_link`。不向模型发送第二张图，不声称双图视觉语义或真模型理解；V7 双图 live 需单独授权
+- integration (keyless): `map/arcgis-mcp/tests/composition.e2e.mjs` 的 `map compare`/`map change` 目录用例在真实 Web Loader 的主模型请求里核对两工具挂载及其 schema；`map/arcgis-mcp/tests/arcgis-mcp.spec.mjs` 用 runtime.service 真调用验证 `map_compare_views` 的两个 `resource_link`。不向模型发送第二张图，不声称双图视觉语义或真模型理解；双图 live 需单独授权
 - integration (opt-in): `map/arcgis-mcp/tests/composition.e2e.mjs` 的 `visual change live` 用例仅当 `MAP_VISUAL_CHANGE_LIVE=1` 且 spec decision 与 model/budget/authority env 镜像一致时启动；`map/arcgis-mcp/tests/visual-change-live-fixture.mjs` 在隔离 home/workspace seed 两条真实持久化 observation 与两张 PNG，模型可见四步采集工具与两个比较工具，但 guard 只允许执行 `map_compare_views` → `map_mark_changes`，seed-only 报告不声称同一次 live 完成采集链；记录 relay/upstream/events、两张图 hash 和 usage。未授权时保持零副作用；该 lane 不能由 keyless fixture 或 MCP resource_link 替代
 - Loader: `map/tests/loader-smoke.spec.mjs` `arcgis-mcp` 行组合；`map/tests/built-smoke.spec.mjs` built 入口
 - snapshot: `snapshots/session/map-analyst-turn`（keyed 已建立）：内部 ArcGIS MCP dispatch 承载的 map_*/geo_* 调用随录制会话走真实 tools/call→tools/list 链路并 keyless 回放；`snapshots/web/map-use-session`（web lane 已建立，2026-11-08）：真实浏览器 + map-web bundle 录制的完整 Session 含真实 `map_observe`/`map_use` 调用，keyless 回放经 `replay.override.json` 的 `{{fromRequest}}` 把动态 observation_id 绑定到当次请求与已录修订，图像字节与修订逐项断言
@@ -254,16 +254,16 @@
 
 - unit: `map/spatial-storage/tests/gc.spec.mjs` 已发布版本 GC——reader pin（幂等/拒绝/保护边呈现）、release 终结（幂等/未知目标/非字节 kind 拒绝）、回收（字节+行+标记原子清退、读取显式 missing）、执行期 pin 复核跳过、未释放零引用不回收、会话引用边保护、并发 lease-held、备份恢复搬迁后标记与相对路径可解析；`map/spatial-storage/tests/migrate.spec.mjs` 迁移阶梯（forward/幂等/失败回滚/dry-run 只读/未来版本拒绝/checksum）；`map/spatial-storage/tests/recovery.spec.mjs` 缺文件/digest 不符/权限变化/未来版本/无父 fork 的分层报告；`map/spatial-storage/tests/sessions.spec.mjs` 会话库布局（路径方案/`invalid-session-id` 拒绝/逐库迁移与 backup-before-write/清单从 sessions/ 派生并跳过外来项/显式 drop 单库删除且不跟随符号链接/根级旧共享库不读不删）
 - integration: `map/spatial-storage/tests/backup.spec.mjs` bundle staging→verify→publish 与分层恢复（不覆盖、冲突保留、恢复到新位置后引用可解析、旧 Session 字节不变）；`map/spatial-storage/tests/lifecycle.spec.mjs` 引用图保护/清理 TOCTOU/活动写入保护；`map/spatial-storage/tests/session-lifecycle.spec.mjs` 每会话生命周期（首用建库/逐库 SIGKILL 崩溃回滚且邻居不动/恢复扫描按库/staging 与孤儿清理仅在本库/默认全保留 + 显式 drop）
-- Loader: none — 纯库无 plugin 行；计划的 catalog/artifact provider 交付时随其 patch 行评估
+- Loader: none — 纯库无 plugin 行；catalog/artifact provider 尚未落地，其 patch 行落地后评估 Loader 验收
 - snapshot: none — 无模型可见/协议可见输出；报告均为程序化 API 返回值
 - numeric: none — sha256/字节计数为确定性 fixture，不承载几何数值语义
-- perf: none — 本地单写者 P0 无既定预算；见 out-of-scope 表
+- perf: none — 本地单写者无既定预算；见 out-of-scope 表
 - ops: `map/spatial-storage/tests/migrate.spec.mjs` SIGKILL 崩溃 fixture（子进程步骤中途死亡→该步整体回滚→重跑续升）；`map/spatial-storage/tests/lifecycle.spec.mjs` 并发清理 lease 互斥
 
 - owner: @map-harness/spatial-storage 包
 - command: `pnpm --filter @map-harness/spatial-storage run test`
 - suites: `map/spatial-storage/tests/gc.spec.mjs`, `map/spatial-storage/tests/migrate.spec.mjs`, `map/spatial-storage/tests/backup.spec.mjs`, `map/spatial-storage/tests/lifecycle.spec.mjs`, `map/spatial-storage/tests/recovery.spec.mjs`, `map/spatial-storage/tests/sessions.spec.mjs`, `map/spatial-storage/tests/session-lifecycle.spec.mjs`
-- out-of-scope: 已发布版本 GC 已交付（2026-10-07，schema v5：reader_pins/released_versions + 既有 cleanup lease/plan/execute 协议；显式 release 终结制，无 TTL，语义定义与方法版本维持不自动删除，删除前提见 storage-lifecycle.md）；跨网络/对象存储备份与密钥轮换（部署包扩展，spec §3.2）
+- out-of-scope: 跨网络/对象存储备份与密钥轮换（部署包扩展）。
 
 ### `spatial-catalog/`（版本化目录/不可变导入/产物发布/store 服务）
 
@@ -272,32 +272,32 @@
 - Loader: `map/tests/loader-smoke.spec.mjs` `spatial-catalog` insert 行与链接集；`map/tests/topology.spec.mjs` 依赖方向（tools→spatial-catalog→spatial-storage）
 - snapshot: `snapshots/session/map-analyst-turn`（keyed 已建立）：catalog_register（资源名→确定性 res ref）与 catalog_resolve（feature refs）的真实 content 录制在案并 keyless 回放（readPoint/readAt 与 art-* ref 由快照 identity 归一化为 token）；geo_buffer 发布的 artifact 元数据同场景覆盖
 - numeric: `map/spatial-catalog/tests/catalog.spec.mjs` sha256 摘要/字节计数/extent 确定性 fixture；`map/tools/tests/numeric-answers.spec.mjs` 承载几何数值语义
-- perf: none — 本地单写者 P0 无既定预算；`maxStoreBytes` 为部署 Config，磁盘满以 `CATALOG_STORE_FULL` 拒绝（见 out-of-scope 表）
-- ops: `map/tools/tests/catalog-chain.spec.mjs` map_save 文件/目录/Session flush 各自故障独立报告（accepted 状态保留）；`map/spatial-storage/tests/migrate.spec.mjs` SIGKILL 崩溃回滚对 P0b schema 阶梯成立
+- perf: none — 本地单写者无既定预算；`maxStoreBytes` 为部署 Config，磁盘满以 `CATALOG_STORE_FULL` 拒绝（见 out-of-scope 表）
+- ops: `map/tools/tests/catalog-chain.spec.mjs` map_save 文件/目录/Session flush 各自故障独立报告（accepted 状态保留）；`map/spatial-storage/tests/migrate.spec.mjs` SIGKILL 崩溃回滚对现行 schema 阶梯成立
 
 - owner: `@map-harness/spatial-catalog` 包
 - command: `pnpm --filter @map-harness/spatial-catalog run test`
 - suites: `map/spatial-catalog/tests/catalog.spec.mjs`, `map/spatial-catalog/tests/semantic.spec.mjs`, `map/spatial-catalog/tests/governance.spec.mjs`, `map/spatial-catalog/tests/governance-tenant-recall.spec.mjs`, `map/spatial-catalog/tests/session-isolation.spec.mjs`, `map/tools/tests/catalog-chain.spec.mjs`, `map/tools/tests/governance-entries.spec.mjs`
 - out-of-scope: 跨存储 DB namespace（PostGIS）；不受本项目治理的外部副本物理删除（副本召回仅阻止登记副本经受控入口继续使用，见 [spatial-governance.md](spatial-governance.md)）。多租户 ACL 与受治理副本召回由上述 unit/integration 覆盖；已发布版本 GC 由 `spatial-storage/` 拥有。
 
-### `spatial-context/`（P0c owner：DecisionFrame/上下文注入/方法卡/预算）
+### `spatial-context/`（owner：DecisionFrame/上下文注入/方法卡/预算）
 
-- unit: `map/spatial-context/tests/frame.spec.mjs` 来源权限（仅真实 user/message 可改目标）、plan 冲突检查、有界记录；`map/spatial-context/tests/budget.spec.mjs` 预算 preflight/不可重置/补救上限；`map/spatial-context/tests/method-discovery.spec.mjs` 十二张方法卡的按需发现（含单图 visual-candidates 与双图 visual-change-candidates）、数据前提、单位、限制与停止条件，负例拒绝缓冲冒充路网、未知 CRS、无分母率与相关冒充因果；双图卡用排他顺序证据锁住单图请求不会误选两期链路，且不把发布日当拍摄日
+- unit: `map/spatial-context/tests/frame.spec.mjs` 来源权限（仅真实 user/message 可改目标）、plan 冲突检查、有界记录；`map/spatial-context/tests/budget.spec.mjs` 预算 preflight/不可重置/补救上限；`map/spatial-context/tests/method-discovery.spec.mjs` 十一张方法卡的按需发现（含单图 visual-candidates 与双图 visual-change-candidates）、数据前提、单位、限制与停止条件，负例拒绝缓冲冒充路网、未知 CRS、无分母率与相关冒充因果；双图卡用排他顺序证据锁住单图请求不会误选两期链路，且不把发布日当拍摄日
 - unit: `map/spatial-context/tests/basemap-context.spec.mjs` 验证基础/注记标题进入快照、两个底图工具与两个双图比较工具计入框架工具表、未确认变化候选行不冒充已确认变化
 - integration: `map/spatial-context/tests/projection.spec.mjs` 真实 Session 折叠（goal/plan/证据/资源/注入/预算）+ 与 map-tools producer codec 的 parity；`map/spatial-context/tests/snapshot.spec.mjs` 基线/增量组成、digest 去重、方法卡选择、停止建议
 - Loader: `map/tests/loader-smoke.spec.mjs` `spatial-context` insert 行 + `spatial-context/agent` preset 行；`map/tests/built-smoke.spec.mjs` built `index.js`/`agent.js` 入口契约；`map/tests/topology.spec.mjs` 依赖方向（tools→spatial-context→map-container）
 - snapshot: `map/spatial-context/tests/loop.spec.mjs` keyless 真实 loop 模型请求快照（mock adapter 断言实际请求内嵌的基线/增量文本）；`snapshots/session/map-analyst-turn`（keyed 已建立）：预注入器（`spatial-context/agent`）在录制组合内，基线+增量注入文本随录制会话 keyless 逐字节回放——墙钟 elapsed 预算行、随体 digest 与被其字宽牵动的 context 计数由快照 identity 层归一化为 `{{elapsed}}`/`{{digest:n}}`/`{{contextBytes}}` 占位，其余预算计数保持回归可见（见「门禁归属」）
 - numeric: none — 上下文注入不承载几何数值
-- perf: none — 成本记录而非硬门禁（设计 §5.5）；预算为硬计数/字节/时间限制
-- ops: `map/spatial-context/tests/loop.spec.mjs` 取消/空首步/reject 不自启不预提交、compaction 后同 goal 重建基线、fork 重放预算（审计 D05/D06 验收）
+- perf: none — 成本记录而非硬门禁；预算为硬计数/字节/时间限制
+- ops: `map/spatial-context/tests/loop.spec.mjs` 取消/空首步/reject 不自启不预提交、compaction 后同 goal 重建基线、fork 重放预算
 
-- owner: `@map-harness/spatial-context` 包（P0c）
+- owner: `@map-harness/spatial-context` 包
 - command: `pnpm --filter @map-harness/spatial-context run test`
-- suites: `map/spatial-context/tests/frame.spec.mjs`, `map/spatial-context/tests/budget.spec.mjs`, `map/spatial-context/tests/basemap-context.spec.mjs`, `map/spatial-context/tests/projection.spec.mjs`, `map/spatial-context/tests/snapshot.spec.mjs`, `map/spatial-context/tests/loop.spec.mjs`
-- out-of-scope: 自然语言授权判定器（设计 §3.3 明确 P0 不建）；真实供应商费用计费（预算只作估算记录）
+- suites: `map/spatial-context/tests/frame.spec.mjs`, `map/spatial-context/tests/budget.spec.mjs`, `map/spatial-context/tests/method-discovery.spec.mjs`, `map/spatial-context/tests/basemap-context.spec.mjs`, `map/spatial-context/tests/projection.spec.mjs`, `map/spatial-context/tests/snapshot.spec.mjs`, `map/spatial-context/tests/loop.spec.mjs`
+- out-of-scope: 自然语言授权判定器（明确不建）；真实供应商费用计费（预算只作估算记录）
 
 
-### `spatial-accessibility/`（P1 owner：可达性契约/provider/run 存储/覆盖/候选比较/高德、天地图、天地图浏览器SDK、Mapbox、百度、腾讯 adapter）
+### `spatial-accessibility/`（owner：可达性契约/provider/run 存储/覆盖/候选比较/高德、天地图、天地图浏览器SDK、Mapbox、百度、腾讯 adapter）
 
 - unit: `map/spatial-accessibility/tests/contract.spec.mjs` 外延嵌套/时间窗/阻抗/容量/入口/候选边界校验与直线探索标记；`map/spatial-accessibility/tests/runs.spec.mjs` run 生命周期（durable 先于 worker、去重/冲突、取消/完成竞争、孤儿裁决、quiescence）；`map/spatial-accessibility/tests/provider-config.spec.mjs` 网络源 Config/凭据面（七项已配置源、六家 credential-ref env 名默认、可选 `baseUrl` 透传与非法根拒绝、未知 id 与缺凭据响亮失败、凭据不进配置序列化/错误文本/networkRef）
 - integration: `map/spatial-accessibility/tests/network.spec.mjs` 受控 provider（route/serviceArea 定价、barrier、分页、故障码、expansion 内 abort）；`map/spatial-accessibility/tests/amap.spec.mjs`、`tianditu.spec.mjs`、`mapbox.spec.mjs`、`baidu.spec.mjs`、`tencent.spec.mjs` 五家 adapter fixture 契约（各自 wire 解析、错误映射、收缩面、取消与凭据卫生；天地图另有界格网服务区采样——成功区/空结果剔除/权限中止/取消检查点/超限拒绝）；`map/spatial-accessibility/tests/metrics.spec.mjs` + `compare.spec.mjs` 覆盖与比较（解析格网、守恒、容量、partial/empty、权重敏感性、固定 revision 导出）；`map/spatial-accessibility/tests/vendor-contract.spec.mjs` 五家厂商契约门禁 key-activated lane（跨界/分页缺失/取消/无效 key 四类 + 真实定价面；无对应 env 各自跳过 exit 0，同断言集受控双跑恒绿）；`map/spatial-accessibility/tests/tianditu-sdk.spec.mjs` 天地图浏览器SDK provider（授权/stub降级/权限拒绝/超时/取消/缺字段解析、凭据只进页面体不进URL与错误文本、loopback页面服务器释放）；`map/tools/tests/run-tools.spec.mjs` 真实 catalog+run 服务+projection 的 submit/get/cancel/retryOf 链路，外加 `properties.id` 绑定、跨资源位置回退、显式 id 冲突拒绝与 `run_get` 具名计算诊断
@@ -307,12 +307,12 @@
 - perf: none — 有界格网计算无既定预算；spec 预算字段（estimate）为确定性上界而非门禁；高德采样服务区的厂商调用数受格网节点上限约束（`AMAP_MAX_LATTICE_NODES`），非本层性能门禁
 - ops: `map/spatial-accessibility/tests/runs.spec.mjs` worker 静止 dispose、死 epoch 孤儿裁决、restore 场景 sweepOrphans；`map/spatial-accessibility/tests/network.spec.mjs` provider abort checkpoint；五家 adapter suite 覆盖传输内 abort 与调用间取消检查点
 
-- owner: `@map-harness/spatial-accessibility` 包（P1）
+- owner: `@map-harness/spatial-accessibility` 包
 - command: `pnpm --filter @map-harness/spatial-accessibility run test`
 - suites: `map/spatial-accessibility/tests/gcj02.spec.mjs`, `map/spatial-accessibility/tests/contract.spec.mjs`, `map/spatial-accessibility/tests/network.spec.mjs`, `map/spatial-accessibility/tests/provider-config.spec.mjs`, `map/spatial-accessibility/tests/amap.spec.mjs`, `map/spatial-accessibility/tests/tianditu.spec.mjs`, `map/spatial-accessibility/tests/tianditu-sdk.spec.mjs`, `map/spatial-accessibility/tests/tianditu-sdk-live.spec.mjs`, `map/spatial-accessibility/tests/mapbox.spec.mjs`, `map/spatial-accessibility/tests/baidu.spec.mjs`, `map/spatial-accessibility/tests/tencent.spec.mjs`, `map/spatial-accessibility/tests/vendor-contract.spec.mjs`, `map/spatial-accessibility/tests/runs.spec.mjs`, `map/spatial-accessibility/tests/metrics.spec.mjs`, `map/spatial-accessibility/tests/compare.spec.mjs`, `map/spatial-accessibility/tests/credential-refresh.spec.mjs`
-- out-of-scope: 五家真实 API 复验为 key-activated lane（adapter 与 keyless 契约门禁已交付；用户填凭据后运行 `map/spatial-accessibility/tests/vendor-contract.spec.mjs`，对应 env 为 `AMAP_API_KEY`、`TIANDITU_API_KEY`、`MAPBOX_ACCESS_TOKEN`、`BAIDU_API_KEY`、`TENCENT_MAP_KEY`）；天地图浏览器SDK真实授权为 key-activated lane（`map/spatial-accessibility/tests/tianditu-sdk-live.spec.mjs`，env `TIANDITU_SDK_KEY`；2026-10-12 实测浏览器端 Key 经 JS API 驾车授权成立（时长/距离/折线经 `getDuration`/`getDistance`/`getPath` 实录）；加载器服务类为 onload 后两阶段注入，页面等待至多 10 秒再判 stub；百度 JS API verify 通过但服务层在此环境不派发请求——维护者裁决百度非 LBS 验收门禁，天地图双通道为基线，百度保留可选源）；组合选址全局优化由 P3 拥有；取消/百度240以外供应商失败的模型行为录制尚未覆盖，覆盖成功链见设施选址案例。
+- out-of-scope: 五家真实 API 复验为 key-activated lane（用户填凭据后运行 `map/spatial-accessibility/tests/vendor-contract.spec.mjs`，对应 env 为 `AMAP_API_KEY`、`TIANDITU_API_KEY`、`MAPBOX_ACCESS_TOKEN`、`BAIDU_API_KEY`、`TENCENT_MAP_KEY`）；天地图浏览器SDK真实授权为 key-activated lane（`map/spatial-accessibility/tests/tianditu-sdk-live.spec.mjs`，env `TIANDITU_SDK_KEY`；2026-10-12 实测浏览器端 Key 经 JS API 驾车授权成立（时长/距离/折线经 `getDuration`/`getDistance`/`getPath` 实录）；加载器服务类为 onload 后两阶段注入，页面等待至多 10 秒再判 stub；百度 JS API verify 通过但服务层在此环境不派发请求——维护者裁决百度非 LBS 验收门禁，天地图双通道为基线，百度保留可选源）；组合选址全局优化由 `@map-harness/spatial-decision` 拥有；取消/百度240以外供应商失败的模型行为录制尚未覆盖，覆盖成功链见设施选址案例。
 
-### `spatial-statistics/`（P2 owner：统计契约/置换检验/时空模式/证据谱系）
+### `spatial-statistics/`（owner：统计契约/置换检验/时空模式/证据谱系）
 
 - unit: `map/spatial-statistics/tests/contract.spec.mjs` spec 校验（一次返回全部 issue、时间前推/嵌套/词表拒绝）与摘要确定性；`map/spatial-statistics/tests/stats.spec.mjs` Moran/LISA/Gi\* 对照独立稠密实现、9! 全枚举核对置换机制、Cliff–Ord 大样本收敛、种子逐位复现、not_applicable 拒绝（常数场/单元不足/零邻居/孤岛）
 - integration: `map/spatial-statistics/tests/patterns.spec.mjs` change/cluster/flow 解析答案（缺窗 unknown、迟到排除、稀疏拒绝、DBSCAN 精确分配、断链不插补、留出漂移/Jaccard 手算）；`map/spatial-statistics/tests/evidence.spec.mjs` 谱系分组不重复计证据、多尺度阶梯逐档重算与符号分歧公开、图例域从冻结结果一次性导出
@@ -322,12 +322,12 @@
 - perf: none — 有界表（≤5000 单元）同步计算无既定预算；大矩阵走 artifact 引用不进 meta
 - ops: `map/tools/tests/stat-tools.spec.mjs` 配对缺失/嵌套 dispatch/无效 spec 的拒绝路径、not_applicable 不发布 artifact、meta 经 codec 解码
 
-- owner: `@map-harness/spatial-statistics` 包（P2）
+- owner: `@map-harness/spatial-statistics` 包
 - command: `pnpm --filter @map-harness/spatial-statistics run test`
 - suites: `map/spatial-statistics/tests/contract.spec.mjs`, `map/spatial-statistics/tests/stats.spec.mjs`, `map/spatial-statistics/tests/patterns.spec.mjs`, `map/spatial-statistics/tests/evidence.spec.mjs`, `map/tools/tests/stat-tools.spec.mjs`
-- out-of-scope: 外部成熟统计 provider 接入（设计 §13.1 后续阶段；工作区内无该依赖，根 lockfile 变更超出 map 层边界）；栅格 zonal 与服务器大数据分块（负载证据具备后引入）；本包 content 行为流录制（keyed 通道已建立，schema 面在 `snapshots/session/map-analyst-turn`，见「门禁归属」）
+- out-of-scope: 外部成熟统计 provider 接入（后续阶段；工作区内无该依赖，根 lockfile 变更超出 map 层边界）；栅格 zonal 与服务器大数据分块（负载证据具备后引入）；本包 content 行为流录制（keyed 通道已建立，schema 面在 `snapshots/session/map-analyst-turn`，见「门禁归属」）
 
-### `spatial-decision/`（P3 owner：归因/预测/方案优化契约与计算）
+### `spatial-decision/`（owner：归因/预测/方案优化契约与计算）
 
 - unit: `map/spatial-decision/tests/contract.spec.mjs` 三 spec 族校验（一次返回全部 issue、方法版本快照、设计/特征前置互斥、键序无关摘要）；`map/spatial-decision/tests/linalg.spec.mjs` Student-t/正态分位数对照 R `qt()`/`qnorm()` 公开值（1e-9）、不完全 Beta 闭式与对称恒等、OLS 手算系统与奇异拒绝
 - integration: `map/spatial-decision/tests/attribution.spec.mjs` association/explain 解析答案与诚实拒绝；`map/spatial-decision/tests/causal.spec.mjs` 平衡设计恢复真值达 causal、失衡/重叠/干扰/缺设计/无变异分别具名降级、DiD 手算 delta + Welch 区间；`map/spatial-decision/tests/forecast.spec.mjs` 时间前推留出胜过 naive 基线、threshold/quadratic-ridge 解析样例与序列化往返、concurrent 特征在 validate/predict 拒绝（泄漏失败响亮）、域外/漂移具名、独立第二实现逐指标复算；`map/spatial-decision/tests/optimize.spec.mjs` 手算目标、不可行候选具名、默认情景标记、权重扰动翻转、容量/预算/平局确定性、global 枚举域与上界拒绝
@@ -337,10 +337,10 @@
 - perf: none — 有界表（≤5000 行、≤16 候选、≤64 站点）同步计算无既定预算；全表走 artifact 引用不进 meta
 - ops: `map/tools/tests/decision-model-tools.spec.mjs` 配对缺失/无效 spec/concurrent 特征的拒绝路径、not_applicable/unknown/partial 诚实状态、meta 经 codec 解码、`scenario_compare` 无资源输入不发布不配对
 
-- owner: `@map-harness/spatial-decision` 包（P3）
+- owner: `@map-harness/spatial-decision` 包
 - command: `pnpm --filter @map-harness/spatial-decision run test`
 - suites: `map/spatial-decision/tests/contract.spec.mjs`, `map/spatial-decision/tests/linalg.spec.mjs`, `map/spatial-decision/tests/attribution.spec.mjs`, `map/spatial-decision/tests/causal.spec.mjs`, `map/spatial-decision/tests/forecast.spec.mjs`, `map/spatial-decision/tests/optimize.spec.mjs`, `map/tools/tests/decision-model-tools.spec.mjs`
-- out-of-scope: 未观测混杂的机器排除（设计 §12.2：机器校验只报告条件）；连续/混合整数求解器、树集成/SVM/神经网络、核方法、大规模分布式训练与实时反馈评价（设计 §3.2 独立发布条件）；设施选址案例以外的工具 content 行为流录制（schema 面在 `snapshots/session/map-analyst-turn`）
+- out-of-scope: 未观测混杂的机器排除（机器校验只报告条件）；连续/混合整数求解器、树集成/SVM/神经网络、核方法、大规模分布式训练与实时反馈评价（独立发布条件）；设施选址案例以外的工具 content 行为流录制（schema 面在 `snapshots/session/map-analyst-turn`）
 
 ### `spatial-viz/`（可视化工作台 owner：样式契约/分类/时间轴/联动导出）
 
@@ -370,7 +370,7 @@
 - owner: `@map-harness/spatial-collab` 包（协同提交与撤销）
 - command: `pnpm --filter @map-harness/spatial-collab run test`
 - suites: `map/spatial-collab/tests/contract.spec.mjs`, `map/spatial-collab/tests/engine.spec.mjs`, `map/spatial-collab/tests/lifecycle.spec.mjs`, `map/tools/tests/collab-tools.spec.mjs`
-- out-of-scope: 分布式锁/CRDT/离线合并（spec §3.2 单独评估）；回滚外部产物（设计 §11.3 明确不承诺）。浏览器手势写通道由 `map-container/` 拥有，通过会话队列提交，不是协同库的输入监听职责。
+- out-of-scope: 分布式锁/CRDT/离线合并（单独评估）；回滚外部产物（明确不承诺）。浏览器手势写通道由 `map-container/` 拥有，通过会话队列提交，不是协同库的输入监听职责。
 
 ### `spatial-terrain/`（地形与视线 owner：垂直元数据/版本绑定/采样视线/有界地形预览）
 
@@ -385,7 +385,7 @@
 - owner: `@map-harness/spatial-terrain` 包（地形/视线分析与显示身份）
 - command: `pnpm --filter @map-harness/spatial-terrain run test`
 - suites: `map/spatial-terrain/tests/contract.spec.mjs`, `map/spatial-terrain/tests/los.spec.mjs`, `map/spatial-terrain/tests/viewshed.spec.mjs`, `map/tools/tests/terrain-tools.spec.mjs`, `map/map-container/tests/terrain-display.spec.mjs`
-- out-of-scope: viewshed 面域可视域已交付（2026-10-07：观测点确定性目标格网逐目标复用采样视线核，radius 20 km/targets 512 协议上限，全表 artifact 固定）；大栅格 viewshed/实时地形/多传感器融合（spec §3.2 由规模包与外部数据通道承接）；真实 3D 地形 draping 渲染画面（composition lane 断言 DOM/工具链，不断言渲染像素）
+- out-of-scope: 大栅格 viewshed/实时地形/多传感器融合（由规模包与外部数据通道承接）；真实 3D 地形 draping 渲染画面（composition lane 断言 DOM/工具链，不断言渲染像素）。
 
 ### `spatial-realtime/`（实时流 owner：三钟分离/去重/watermark 窗口/背压/checkpoint/物化）
 
@@ -430,7 +430,7 @@
 - owner: `@map-harness/spatial-scale` 包（大规模分布式数据通道）
 - command: `pnpm --filter @map-harness/spatial-scale run test`
 - suites: `map/spatial-scale/tests/contract.spec.mjs`, `map/spatial-scale/tests/store.spec.mjs`, `map/spatial-scale/tests/worker.spec.mjs`, `map/spatial-scale/tests/scan-record.spec.mjs`, `map/tools/tests/scale-tools.spec.mjs`
-- out-of-scope: 外部大数据分块驻留同步（连接器已按 2026-10-07 决策收缩为连接能力，由 `spatial-connect` 承接；本包本地分块对象 provider 维持唯一 provider）；多区域与分布式调度（spec §3.2）；恰好一次网络执行（至少一次+游标重放）；本包 content 行为流录制（keyed 通道已建立，schema 面在 `snapshots/session/map-analyst-turn`，见「门禁归属」）
+- out-of-scope: 外部大数据分块驻留同步（连接器已按 2026-10-07 决策收缩为连接能力，由 `spatial-connect` 承接；本包本地分块对象 provider 维持唯一 provider）；多区域与分布式调度；恰好一次网络执行（至少一次+游标重放）；本包 content 行为流录制（keyed 通道已建立，schema 面在 `snapshots/session/map-analyst-turn`，见「门禁归属」）
 
 ### `spatial-perf/`（性能容量 owner：spatial-perf@2 冻结 workload/种子、compute-mix 校准探针、分段测量词表、hard/estimated 预算、比值/绝对基准与 advisory 趋势）
 
@@ -445,7 +445,7 @@
 - owner: `@map-harness/spatial-perf` 包（性能容量与基准门禁）
 - command: `pnpm --filter @map-harness/spatial-perf run test`
 - suites: `map/spatial-perf/tests/contract.spec.mjs`, `map/spatial-perf/tests/instrument.spec.mjs`, `map/spatial-perf/tests/budgets.spec.mjs`, `map/spatial-perf/tests/workloads.spec.mjs`, `map/spatial-perf/tests/benchmark-gate.spec.mjs`, `map/spatial-perf/tests/calibration.spec.mjs`, `map/spatial-perf/tests/diagnostic.spec.mjs`
-- out-of-scope: 百万要素/大栅格/网络 workload（对应 provider 落地后另设 gate，设计 §13.3）；浏览器帧渲染与真实 GUI 时延（composition lane）；供应商费用计费（估计项不强制）；Loader 启动时延（Loader smoke lane）
+- out-of-scope: 百万要素/大栅格/网络 workload（对应 provider 落地后另设 gate）；浏览器帧渲染与真实 GUI 时延（composition lane）；供应商费用计费（估计项不强制）；Loader 启动时延（Loader smoke lane）
 ### `spatial-observability/`（观测运维 owner：correlation/结果词表/错误码/低基数指标/脱敏/健康平面/故障注入矩阵/诊断导出）
 
 - unit: `map/spatial-observability/tests/contract.spec.mjs` 契约 fixture（六结果逐项结算与分类、operationRef 规范文法与越界拒绝、嵌套 scope 继承 trace、闭表标签拒绝载荷/trace id、采样永不丢失败与审计、容量溢出逐类计数、throwing sink 不阻塞不静默）；`map/spatial-observability/tests/sanitize.spec.mjs` 脱敏（凭据键任意深度、几何载荷折叠、POSIX/Windows 路径占位、深度/数组显式截断、循环结构、安全载荷逐位通过、抑制全可见）；`map/spatial-observability/tests/instrument.spec.mjs` 分段指标（八段延迟、字节/扫描/队列等待/深度 gauge、flush/artifact/render 失败独立计数、provider 调用与限流计数、单操作跨平面 correlation、有界 LRU 关联索引、基数恒定）；`map/spatial-observability/tests/health.spec.mjs` 健康面（六平面初始 ready、provider unavailable/catalog lag/render+flush 失败分离、遥测丢弃折叠 process 平面、恢复迁移弧、有界导出截断保审计、导出整体脱敏）
@@ -459,7 +459,7 @@
 - owner: `@map-harness/spatial-observability` 包（观测运维与故障处置）
 - command: `pnpm --filter @map-harness/spatial-observability run test`
 - suites: `map/spatial-observability/tests/contract.spec.mjs`, `map/spatial-observability/tests/sanitize.spec.mjs`, `map/spatial-observability/tests/instrument.spec.mjs`, `map/spatial-observability/tests/health.spec.mjs`, `map/spatial-observability/tests/faults.spec.mjs`, `map/spatial-observability/tests/correlation.spec.mjs`
-- out-of-scope: OTLP/分布式 trace/跨区域告警/SLO 仪表盘（部署环境 adapter 接入，spec §3.2）；上游 telemetry core 改动（边界禁止）；浏览器帧渲染时延（composition lane 拥有）；模型/供应商费用计费（`spatial-perf` 估计项拥有）
+- out-of-scope: OTLP/分布式 trace/跨区域告警/SLO 仪表盘（部署环境 adapter 接入）；上游 telemetry core 改动（边界禁止）；浏览器帧渲染时延（composition lane 拥有）；模型/供应商费用计费（`spatial-perf` 估计项拥有）
 
 ### `spatial-connect/`（外部数据连接 owner：PostGIS/对象存储/COG 连接能力——受验证配置面、凭据环境引用、协议级连通/认证验证）
 
@@ -491,25 +491,22 @@
 - owner: `@map-harness/mcp-transport` 包（远程 MCP transport 接入能力）
 - command: `pnpm --filter @map-harness/mcp-transport run test`
 - suites: `map/mcp-transport/tests/contract.spec.mjs`, `map/mcp-transport/tests/stdio.spec.mjs`, `map/mcp-transport/tests/http.spec.mjs`, `map/mcp-transport/tests/service.spec.mjs`, `map/mcp-transport/tests/live.spec.mjs`
-- out-of-scope: 远程 MCP 服务端部署（2026-10-07 决策：本项目不部署远程主机）；会话化流（SSE）传输（streamable-HTTP JSON 模式）；工具目录缓存/同步（逐连接逐调用发现）；sampling/roots/elicitation 等客户端能力（首期只覆盖 tools）
+- out-of-scope: 远程 MCP 服务端部署（2026-10-07 决策：本项目不部署远程主机）；会话化流（SSE）传输（streamable-HTTP JSON 模式）；工具目录缓存/同步（逐连接逐调用发现）；sampling/roots/elicitation 等客户端能力（只覆盖 tools）
 
 
 ## 未实现能力的门禁归属（out-of-scope 表）
 
-设计 §2.4：每个 release gate 只在负责能力已实现时启用；未实现能力在此登记 owner 与交付门禁，不预建空检查。
+每个 release gate 只在负责能力落地时启用；当前未纳入本矩阵的跨层能力在此登记 owner 与应启用的门禁，不预建空检查；各 owner 段已记录的 out-of-scope 不在此重复。
 
-| 能力 | 阶段 | Owner | 交付时启用的门禁 | 当前状态 |
+| 能力 | 归属 | Owner | 应启用的门禁 | 当前边界 |
 |---|---|---|---|---|
-| 网络可达性（路网/LBS provider） | P1 | `@map-harness/spatial-accessibility`（已交付） | provider focused test（跨界/分页缺失/取消已由 network.spec 覆盖）；真实供应商 contract test | 受控 provider 已交付；高德、天地图、Mapbox 三家 adapter + keyless 自跳过契约门禁已交付（2026-09-27，`amap.spec.mjs`/`tianditu.spec.mjs`/`mapbox.spec.mjs`/`provider-config.spec.mjs`/`vendor-contract.spec.mjs`，受控双跑等价恒绿）；真实 API 复验为 key-activated lane（用户填 `AMAP_API_KEY`/`TIANDITU_API_KEY`/`MAPBOX_ACCESS_TOKEN` 后一条命令复验，命令见 spatial-accessibility owner 行） |
-| 人口守恒/覆盖统计 | P1 | `@map-harness/spatial-accessibility`（已交付） | 格网重分配守恒 fixture（总量不变负向例） | 已交付（metrics.spec 守恒/容量/入口 fixture） |
-| 空间统计/时空模式 | P2 | `@map-harness/spatial-statistics`（已交付） | 解析小样例 + 独立稠密实现 + 9! 全枚举 + Cliff–Ord 闭式对照（stats.spec 四路交叉验证） | 已交付；外部统计 provider（成熟实现直接接入）与栅格 zonal 为后续阶段 |
-| 归因/预测/优化泄漏 | P3 | `@map-harness/spatial-decision`（已交付） | 基线/识别限制/预测区间/concurrent 泄漏/域外漂移负向 fixture（contract/attribution/causal/forecast/optimize.spec） | 已交付；非线性预测模型与全局组合选址为后续阶段 |
-| 跨存储 DB namespace（PostGIS） | P0b 目录跨存储步骤 | spatial-catalog | DB namespace 隔离与故障注入 fixture | out of scope（本地矢量先行，设计 §15.4） |
-| 性能基准 | 全局 | 上游 `benchmarks/` + `vitest.bench.config.ts`；map 侧 `@map-harness/spatial-perf`（已交付：三条同运行校准比值门、七条绝对门、历史吞吐 advisory 与记录阈值） | 上游 `test:bench` 仍按其规则启用；map 侧由 `map/spatial-perf/tests/benchmark-gate.spec.mjs` 与 `diagnostic.spec.mjs` 承担（`node map/bin/test.mjs` 聚合内） | map 定位/显隐、解析发布、单次空间运算、恢复、双点链路已有测量门禁；帧预算/百万要素 provider 另行设 gate |
-| Windows 平台矩阵 | 全局 | 上游 CI platform matrix | wrapper/composition Windows lane | 本仓库验证仅 POSIX；win32 分支已写，未纳入常规验证 |
-| 录制会话快照（keyed） | 发布前置 | 上游 `snapshots/` 树 | `pnpm run test:snapshot:record` 后 `pnpm run test:snapshot` keyless 回放 | `snapshots/session/map-analyst-turn` 保留 V4 DeepSeek 录制作为行为基线，以独立 writer oracle 固定当前输出及请求 header；GLM 录制保留在 V3 并由 parity 检查读取。`map-facility-decision` 与 `map-lbs-denied` 同样保留行为基线。`snapshots/web/map-use-session`（web snapshot 车道，2026-11-08 交付）是首个含 `map_observe`/`map_use` 真实调用的持久 recorded-session：真实 DeepSeek 录制、keyless 回放执行真实工具并把动态 observation_id 经 `{{fromRequest}}` 绑定当次请求；录制授权为单场景例外，其余仓库 `session*.jsonl` 边界不变。 |
-| Point/Line 面积拒绝、边界接触拓扑判定 | D09/P0b | map-tools 数值语义 owner | 语义变更 + 快照级证据 + 旧行为快照更新 | 现状以 published limitations 披露守卫钉住（`numeric-answers.spec.mjs`） |
-| viewshed 面域可视域、大栅格/实时地形 | 后续规模包 | 待定 | 大栅格 provider contract test + 面域计算的解析对照 fixture | out of scope（本包为采样视线，spec §3.2） |
+| 跨存储 DB namespace（PostGIS） | catalog 跨存储 | spatial-catalog | DB namespace 隔离与故障注入 fixture | 本地矢量先行；未接入 PostGIS |
+| 帧预算 / 百万要素 provider | 性能 | `@map-harness/spatial-perf` | 帧预算与百万要素 provider 的 benchmark gate | 当前测量门禁覆盖定位/显隐、解析发布、单次空间运算、恢复与双点链路 |
+| Windows 平台矩阵 | 全局 | 上游 CI platform matrix | wrapper/composition Windows lane | 本仓库常规验证仅 POSIX；win32 分支未纳入常规验证 |
+| Point/Line 面积拒绝、边界接触拓扑判定 | 数值语义 | map-tools 数值语义 owner | 语义变更 + 快照级证据 + 旧行为快照更新 | 以 published limitations 披露守卫钉住（`numeric-answers.spec.mjs`） |
+| 大栅格 / 实时地形 | 后续规模包 | 待定 | 大栅格 provider contract test + 面域计算的解析对照 fixture | 本包为有界采样视线（`radius_m` ≤ 20 km、≤ 512 目标） |
+
+录制会话快照的当前证据见「回放 fixture 清单」与各 owner 段。
 
 ## 回放 fixture 清单
 
@@ -520,7 +517,7 @@
 | 未配对结果 / surface-replaced 重复（apply-once） | 同上 |
 | 未知 schemaVersion / 未知 kind 只读拒绝 | 同上 |
 | stale revision / capacity / pending overflow | 同上 |
-| 旧日志（pre-P0a flat meta 专用解码路径） | 同上 |
+| 旧日志（flat meta 专用解码路径） | 同上 |
 | projection cache 阶梯（checkpoint 播种 / ver 失配丢弃 / 损坏行丢弃整段重放 / 冷重放相等 / 尾重放续跑） | 同上 |
 | 新进程从原始日志恢复 + fork 隔离 | 同上 |
 | 跨进程 built artifact 重放（子进程挂载 built 插件 + 真实 SessionStore，结果与手写期望字面量逐字段相等） | `map/tests/built-replay.spec.mjs` |
@@ -539,8 +536,8 @@
 | 存储条目缺文件/digest/权限/未来版本分层报告 | `map/spatial-storage/tests/recovery.spec.mjs` |
 | pre-step 基线注入实际进入 user/message（确认仅由投影折叠产生） | `map/spatial-context/tests/loop.spec.mjs` |
 | 重复 digest/无新事实的请求不再注入（可见 surface 去重） | `map/spatial-context/tests/loop.spec.mjs` |
-| compaction 隐藏基线后同 goal 重建完整有界基线（D05） | `map/spatial-context/tests/loop.spec.mjs` |
-| reject/空首步/prepareCall 前取消不自启请求、不预提交目标或注入（D05/D06） | `map/spatial-context/tests/loop.spec.mjs` |
+| compaction 隐藏基线后同 goal 重建完整有界基线 | `map/spatial-context/tests/loop.spec.mjs` |
+| reject/空首步/prepareCall 前取消不自启请求、不预提交目标或注入 | `map/spatial-context/tests/loop.spec.mjs` |
 | mid-turn 增量注入新证据/计划，不改写历史 | `map/spatial-context/tests/loop.spec.mjs` |
 | decision_update 目标/计划冲突与预算在花费前拒绝 | `map/spatial-context/tests/loop.spec.mjs` |
 | 未知 decision-change 版本只读诊断、失败结果折叠为 failed 证据 | `map/spatial-context/tests/projection.spec.mjs` |
@@ -591,7 +588,7 @@
 
 主张：第三方 OpenAI 兼容网关（GLM 系模型）经 `llm-deepseek` 的 chat-completions 消费面（`packages/llm/llm-deepseek/src/protocols/chat-completions/`）与官方 DeepSeek 在 **dsh 实际消费的契约维度**上行为等价。维度与源码依据：请求形状接受性（`serialize.ts` 的 WireRequest——model/messages、`stream:true`、`stream_options.include_usage`、顶层 `thinking{type}`/`reasoning_effort`、function 工具 schema、temperature/max_tokens/stop）、历史回放编码（assistant 工具回合 `content:""` 绝不 null、`reasoning_content` CoT 回传、`role:'tool'` 按 `tool_call_id` 配对）、SSE 分帧与字面 `[DONE]` 哨兵（`sse.ts`）、流式增量语义（首个空串 reasoning 增量不开块、工具调用 id/function.name 首增量携带且后续 `''`/`null` 表示不变、按 `index` 组装并行调用）、finish_reason 词汇（stop/tool_calls/length 逐一映射，未知值落 error finish）、usage 记账（`prompt_tokens` 含缓存命中、按不相交计数扣除、`completion_tokens_details.reasoning_tokens`）、错误分类（401/403→AUTH、413/400→INVALID_REQUEST 家族、429→RATE_LIMIT 含 retry-after、≥500→SERVER）与流生命周期（usage 先于恰一个 finish 且其后无 chunk、每读空闲看门狗、调用方中止）。
 
-证据两层。**契约级**（keyed，无 `DEEPSEEK_API_KEY` 自跳过并跑 fixture 级自检）：`apps/cli/tests/profiles/headless/tests/provider-contract.e2e.ts` 经共享双模式 launcher 从 `apps/cli/src/bin.ts` 真实启动 `dsh --profile headless`（组合 patch `apps/cli/tests/profiles/headless/provider-contract.patch.yml`，网关经 `DEEPSEEK_API_KEY`/`DEEPSEEK_BASE_URL` 环境选择、模型经 `DSH_CONTRACT_MODEL`），固定 9 场景（纯文本回合、思考回合与 CoT 回放、单工具往返、多轮工具链、并行/索引工具调用、结构化 JSON 输出、低 max_tokens 输出上限、目录外模型与无效凭据两条负向、流中途 SIGKILL 后恢复）对上述维度做确定性结构断言；2026-09-26 经网关 glm-5.3 实测全绿，同日官方阻塞入档后带 fixture 修正复验仍绿（vitest 15/15 通过——5 keyless 自检 + 10 keyed 场景，tests 墙钟 199.41s，整链 exit 0）。**结构级**（keyless）：`map/tests/glm-deepseek-parity.spec.mjs` 只读对比既有双语料（上游 DeepSeek 录制 `snapshots/session/` vs GLM 录制 `snapshots/session/map-analyst-turn`），双方在同一组结构不变量上 100% 一致（2026-09-26 实测：嵌入式流协议序 GLM 4/4、上游 live 93/93；工具调用身份合规 GLM 4/4、上游 live 55/55；工具参数 JSON 有效性 live 双方 100%（上游唯一一条非法参数出自 authored 负向 fixture `deepseek-messages-invalid-tool-history`，其设计目的即非法历史）；call↔result 配对 GLM 4/4、上游 live 55/55 与 authored 97/97；finish 词汇双双全在文档化集合内，GLM {tool-calls:3, stop:1}、上游 live {tool-calls:49, stop:44}+authored {stop:72, tool-calls:92, max-tokens:1}；usage 正值与 totalTokens 不相交和一致 GLM 4/4、上游 live 99/99 与 22/22；reasoning 块先于 text 块 GLM 1/1、上游 39/39；GLM 网关 4/4 上报 cacheReadTokens 与 reasoningTokens）。
+证据两层。**契约级**（keyed，留存收据；该上游 lane 不在本树，当前树没有可执行路径）：lane 经共享双模式 launcher 从 `dsh --profile headless` 组合启动，网关经 `DEEPSEEK_API_KEY`/`DEEPSEEK_BASE_URL` 环境选择、模型经 `DSH_CONTRACT_MODEL`，固定 9 场景（纯文本回合、思考回合与 CoT 回放、单工具往返、多轮工具链、并行/索引工具调用、结构化 JSON 输出、低 max_tokens 输出上限、目录外模型与无效凭据两条负向、流中途 SIGKILL 后恢复）对上述维度做确定性结构断言；2026-09-26 经网关 glm-5.3 实测全绿，同日官方阻塞入档后带 fixture 修正复验仍绿（vitest 15/15 通过——5 keyless 自检 + 10 keyed 场景，tests 墙钟 199.41s，整链 exit 0）。**结构级**（keyless）：`map/tests/glm-deepseek-parity.spec.mjs` 只读对比既有双语料（上游 DeepSeek 录制 `snapshots/session/` vs GLM 录制 `snapshots/session/map-analyst-turn`），双方在同一组结构不变量上 100% 一致（2026-09-26 实测：嵌入式流协议序 GLM 4/4、上游 live 93/93；工具调用身份合规 GLM 4/4、上游 live 55/55；工具参数 JSON 有效性 live 双方 100%（上游唯一一条非法参数出自 authored 负向 fixture `deepseek-messages-invalid-tool-history`，其设计目的即非法历史）；call↔result 配对 GLM 4/4、上游 live 55/55 与 authored 97/97；finish 词汇双双全在文档化集合内，GLM {tool-calls:3, stop:1}、上游 live {tool-calls:49, stop:44}+authored {stop:72, tool-calls:92, max-tokens:1}；usage 正值与 totalTokens 不相交和一致 GLM 4/4、上游 live 99/99 与 22/22；reasoning 块先于 text 块 GLM 1/1、上游 39/39；GLM 网关 4/4 上报 cacheReadTokens 与 reasoningTokens）。
 
 上游 `0.2.0-rc.2` 已移除旧的 `test:provider-parity` 根脚本；本包保留可离线重放的结构级 parity lane：`node --test map/tests/glm-deepseek-parity.spec.mjs`。需要官方供应商实跑时，应在上游拥有者恢复对应 profile lane 后另行验证，不把缺失脚本伪装成可执行证据。
 
@@ -615,7 +612,7 @@ map 层测试的共用约定由 `map/tests/support/reliability.mjs` 提供，`ma
 | map 工程门禁聚合 | `node map/bin/test.mjs [--build]` | `map/tests/` | 新 suite 必须入聚合并登记本矩阵 |
 | 真实 GUI/模型链路 | `pnpm --filter @map-harness/arcgis-mcp run test:composition` | arcgis-mcp lane | 需 `node map/bin/build-web.mjs` + Playwright；真实 GUI 改动另按仓库规则录制 GIF |
 | expected 过程期望 | `pnpm run test:expected`（owner-local） | 上游树 owner | `pnpm run test:expected:refresh`；map 层当前无 owner-local expected |
-| 录制会话快照 | `pnpm run test:snapshot` / `:record` | 上游 `snapshots/` 树 | 仅模型/用户/协议可见变化录制；record 需真实 key；replay keyless。keyed 通道已建立（2026-09-26）：通道为全局多供应商机制（`DEEPSEEK_API_KEY`/`DEEPSEEK_BASE_URL` env 指向 DeepSeek 官方或第三方，场景级 provider/model 由组合 patch 声明）。map 层场景 `snapshots/session/map-analyst-turn`（组合 map-analyst：headless 基座 + map 容器/ArcGIS MCP/spatial-catalog/spatial-context/spatial-context/agent 预注入器/spatial-accessibility/spatial-collab 插件 + map-tools 全量 72 工具，`mode: native`）以 `DSH_SNAPSHOT=record pnpm run test:snapshot:record -t map-analyst-turn` 经网关 glm-5.3（chat-completions）录制；无 key 双模式实测全绿：CI lib 模式（`DSH_EXAMPLE_MODE=lib`）167 通过/2 跳过（169）exit 0；dev 默认 src/tsx 模式 161 通过/2 跳过（163）exit 0。通道边界如实记录：spatial-context 预注入器（`spatial-context/agent`）已纳入录制组合——墙钟 elapsed 预算行、随体 digest 与被其字宽牵动的 context 计数由快照 identity 层归一化（`{{elapsed}}`/`{{digest:n}}`/`{{contextBytes}}`），基线+增量注入文本 keyless 逐字节回放（其 keyless loop 行为由 `map/spatial-context/tests/loop.spec.mjs` 继续）；上游既有 live 场景维持 DeepSeek 录制、不随本通道重写（用户 2026-09-26 决策，属上游所有者）。spatial-accessibility 插件入口已补全（2026-09-26：包根导出 apply/inject 激活面，Loader 行激活、组合纳入并重录，run_* 工具面随插件激活进入会话，行为另由 focused specs 守卫）。2026-09-26 之前的历史：lib 模式原唯一失败 ptc-python-turn 系默认 `python3` 解析到 3.9.6，运行时对未配置默认按 python3.14…python3.10 版本化回退后接线 Homebrew ≥3.10；src 模式原 84 失败系 tsx source-launch 双平面下 `TOOL_RUNTIME_SCHEDULER` fresh Symbol 跨求值身份不等，改注册符号后收敛（处置台账见 `.spec/specs/archive` 快照阻塞清障包）。keyless 等价证据层 = map 聚合门禁（29 lane）+ composition lane + 翻译配对 + loader-smoke 全量链接断言 |
+| 录制会话快照 | `pnpm run test:snapshot` / `:record` | 上游 `snapshots/` 树 | 仅模型/用户/协议可见变化录制；record 需真实 key；replay keyless。keyed 通道已建立（2026-09-26）：通道为全局多供应商机制（`DEEPSEEK_API_KEY`/`DEEPSEEK_BASE_URL` env 指向 DeepSeek 官方或第三方，场景级 provider/model 由组合 patch 声明）。map 层场景 `snapshots/session/map-analyst-turn`（组合 map-analyst：headless 基座 + map 容器/ArcGIS MCP/spatial-catalog/spatial-context/spatial-context/agent 预注入器/spatial-accessibility/spatial-collab 插件 + map-tools 全量工具（`SPATIAL_MCP_TOOL_NAMES`，见 `map/tools/src/spatial-catalog.ts`），`mode: native`）以 `DSH_SNAPSHOT=record pnpm run test:snapshot:record -t map-analyst-turn` 经网关 glm-5.3（chat-completions）录制；无 key 双模式实测（CI lib 模式 `DSH_EXAMPLE_MODE=lib` 与 dev 默认 src/tsx 模式）回放通过。通道边界：spatial-context 预注入器（`spatial-context/agent`）在录制组合内——墙钟 elapsed 预算行、随体 digest 与被其字宽牵动的 context 计数由快照 identity 层归一化（`{{elapsed}}`/`{{digest:n}}`/`{{contextBytes}}`），基线+增量注入文本 keyless 逐字节回放（keyless loop 行为由 `map/spatial-context/tests/loop.spec.mjs` 继续）；上游既有 live 场景维持 DeepSeek 录制、不随本通道重写（属上游所有者）。spatial-accessibility 插件入口导出 apply/inject 激活面，Loader 行激活、组合纳入，run_* 工具面随插件激活进入会话，行为由 focused specs 守卫。keyless 等价证据层 = map 聚合门禁（32 lane）+ composition lane + 翻译配对 + loader-smoke 全量链接断言 |
 | 供应商契约等价（GLM 网关 lane） | `node --test map/tests/glm-deepseek-parity.spec.mjs` | `map/tests/glm-deepseek-parity.spec.mjs`（结构级 keyless） | 上游 `0.2.0-rc.2` 不再提供旧的 `test:provider-parity` 根脚本；该 lane 只证明已提交 transcript 的共同结构不漂移，不宣称真实供应商请求已完成；真实 provider lane 另按上游拥有者的当前 profile 约定执行 |
 | benchmark | `pnpm run test:bench` | 上游 `benchmarks/` | map 层无条目；出现敏感路径时按 out-of-scope 表启用 |
 | lint/doc/类型 | 各包 `tsc -b`（随 build）+ 上游聚合 lint/doc-sync | 上游（不扫 `map/`） | map 层由 `map/tests` 门禁 + built JSDoc 门禁等价覆盖，不重复报名 |
@@ -649,15 +646,16 @@ map 层测试的共用约定由 `map/tests/support/reliability.mjs` 提供，`ma
 19. `map-tools package tests`
 20. `arcgis-mcp package tests (incl. provider lifecycle)`
 21. `ui-settings-lbs package tests (controller/form credentials)`
-22. `map engineering topology gates`
-23. `map standalone instance gates`
-24. `map resource reliability gates`
-25. `map built-artifact replay parity`
-26. `map built-artifact smoke`
-27. `map Loader composition smoke`
-28. `map GLM/DeepSeek corpus parity gates`
-29. `map runtime release and brand privacy gates`
-30. `map native application sealing gate`
-31. `map verification matrix gate`
+22. `lbs-keyring package tests (policy/service)`
+23. `map engineering topology gates`
+24. `map standalone instance gates`
+25. `map resource reliability gates`
+26. `map built-artifact replay parity`
+27. `map built-artifact smoke`
+28. `map Loader composition smoke`
+29. `map GLM/DeepSeek corpus parity gates`
+30. `map runtime release and brand privacy gates`
+31. `map native application sealing gate`
+32. `map verification matrix gate`
 
 composition e2e 保持独立 lane（`pnpm --filter @map-harness/arcgis-mcp run test:composition`），不在聚合内。

@@ -1,6 +1,6 @@
 # 远程 MCP transport：接入能力（stdio 跨进程 / streamable-HTTP）
 
-English page: see the slot row in [../README.md](../README.md)；本页是远程 MCP transport 客户端面的设计契约（spec 包 `2026-10-07_add-remote-mcp-transport`；2026-10-07 决策：不部署远程主机，keyless lane 在环回 fixture 上证明客户端面）。
+English page: see the slot row in [../README.md](../README.md)；本页是远程 MCP transport 客户端面的现行契约。
 
 ## 1. 边界：接入，不部署
 

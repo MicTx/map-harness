@@ -1,6 +1,6 @@
 # 真实流供应商：接入与多源融合（stream-providers@1）
 
-English page: see the slot row in [../README.md](../README.md)；本页是真实流供应商接入面的设计契约（spec 包 `2026-10-07_add-realtime-provider-fusion`；2026-10-07 决策：凭据按名经 cc-switch 在执行轮解析，poll 族方案否决；重连退避由停靠在途读取替代）。
+English page: see the slot row in [../README.md](../README.md)；本页是真实流供应商接入面的现行契约。
 
 ## 1. 边界：接入与融合，不部署
 

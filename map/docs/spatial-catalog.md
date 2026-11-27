@@ -1,12 +1,12 @@
 # 空间资源目录（spatial-catalog）
 
-本文是 P0b 版本化数据链和语义索引的运行时权威文档：`@map-harness/spatial-catalog`（`map/spatial-catalog/`）拥有的事务化目录 API、身份模型与发布顺序；模型可见的 `catalog_register`/`catalog_resolve` 工具与 `map_save` 的跨存储顺序归 `map/tools`（错误码与工具面见 [arcgis-mcp.md](arcgis-mcp.md)）。物理存储（每会话独立 `store.db` schema 版本、`files/`、`staging/`、备份/清理）归 [storage-lifecycle.md](storage-lifecycle.md) 与 `@map-harness/spatial-storage`。设计依据是 `.spec/docs/2026-09-23_docs-spatial-agent-architecture_design.md` §6.2/§7.2/§8/§15.4 与审计 D03/D07/D08。
+本文是版本化数据链和语义索引的运行时权威文档：`@map-harness/spatial-catalog`（`map/spatial-catalog/`）拥有的事务化目录 API、身份模型与发布顺序；模型可见的 `catalog_register`/`catalog_resolve` 工具与 `map_save` 的跨存储顺序归 `map/tools`（错误码与工具面见 [arcgis-mcp.md](arcgis-mcp.md)）。物理存储（每会话独立 `store.db` schema 版本、`files/`、`staging/`、备份/清理）归 [storage-lifecycle.md](storage-lifecycle.md) 与 `@map-harness/spatial-storage`；授权、租户与召回归 [spatial-governance.md](spatial-governance.md)。
 
 ## 职责边界
 
 | 层 | 拥有物 | 不做的事 |
 |---|---|---|
-| `spatial-storage` | store 根布局与每会话库布局（`sessions/<sessionId>/`）、单调 `SPATIAL_STORE_SCHEMA_VERSION`（当前 v3，含 feature_refs/semantic_bindings 与治理表）、逐库迁移/备份/校验/清理与会话库清单/显式删除机制 | 不解释资源语义，不做目录决策 |
+| `spatial-storage` | store 根布局与每会话库布局（`sessions/<sessionId>/`）、单调 `SPATIAL_STORE_SCHEMA_VERSION`（当前 v6，含 feature_refs、semantic_bindings、治理/租户/召回表；逐库迁移阶梯见 [storage-lifecycle.md](storage-lifecycle.md#迁移)）、逐库迁移/备份/校验/清理与会话库清单/显式删除机制 | 不解释资源语义，不做目录决策 |
 | `spatial-catalog` | 目录 repository API 与事务、资源版本/featureRef/RetrievalBundle/产物身份、发布意图（intents）、发布配对 projection、`spatialCatalog` host 服务（进程级路由 + `forSession(sessionId)` 会话视图） | 不读工作区路径（字节由工具边界送入）、不做 CRS 数值变换、不折叠地图状态 |
 | `map/tools` | `catalog_register`/`catalog_resolve`/`map_save` 工具面、`data_import`/`data_export` 数据资源化工具面（导入在工具边界收敛为规范 WGS84 GeoJSON 后注册；导出从精确 ref/图层/整图发布四格式制品）、geo 工具 `ref` 分支、显示副本组装（WGS84 收敛 + displayDigest + 最小图例） | 不绕过目录直接写 `files/`，不把绝对路径交给模型，不为导入/导出建第二存储 |
 

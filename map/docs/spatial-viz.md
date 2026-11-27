@@ -4,7 +4,7 @@
 
 方法版本：`spatial-viz@1`。独立的可视化类型 schema、GitHub 方法目录与场景路由见[可视化方法](visualization-methods.md)；`viz_recommend` 从真实图层画像只读选型，不改变本页的样式持久结构。
 
-三个样式工具由 `@map-harness/map-tools` 承载（`viz_create_style`、`viz_classify`、`viz_compare`），样式变更经 `map-change` v3 `set-style` 提交协议折叠（见 [map-container](map-container-binding.md) 与设计 §6.2/§10.3）。
+`viz-style` 家族的六个工具由 `@map-harness/map-tools` 承载（名单与 meta 行见[能力索引](capability-index.md)）。分类与对比的样式变更经 `map-change` v3 `set-style` 折叠，聚合图层经 `add-layer` 折叠，样式、密度与导出产物以 `viz-style` meta 发布（见 [map-container](map-container-binding.md)）。
 
 ## 契约（contract.ts）
 
@@ -38,14 +38,18 @@
 - `viz_create_style`：从目录冻结字节计算分类并发布样式 artifact（经 publish 配对）；携带 `viz-style` v1 meta（身份 + 断点 + 来源 + artifact ref）。
 - `viz_classify`：对已加载图层按其渲染数据计算样式，产出 `map-change` v3 `set-style` 候选；标准提交协议折叠（未配对/失败/旧 revision/未知图层拒绝）。可选 time 参数给图层挂工作台时间轴。
 - `viz_compare`：两图层统一分类域，一次变更写两条样式；manual 分类无统域语义，直接拒绝。
+- `viz_density`：对已加载 Point 图层按 `radius_km`（0.01–500）与可选 `weight_field` 计算均匀核密度（邻域加权质量 ÷ πr²，单位 个/km² 或 `<weight unit>/km²`），把带 `__density` 的派生集合发布为不可变 artifact；只接受经 ref 载入的图层。强度是显示与摘要量，不是统计显著性，值随所选半径变化。
+- `viz_aggregate`：把一个精确 `res-…@vN` 资源按 `cell_size` 度格网聚合（count 或 sum + `value_field`，`max_cells` ≤ 20000），发布聚合 artifact 并以 `add-layer` 折叠带五分位分类的显示图层；图层声明 display-aggregate 身份（源 ref、单元尺寸、度量），不是分析输入。超过 8 MiB 的资源流式扫描，512 MiB 上限外具名拒绝。
+- `viz_export_kml`：把已加载图层的当前 WGS84 数据导出为 KML 2.2 placemarks + ExtendedData，发布钉定 map revision 的不可变 artifact；只接受经 ref 载入的图层，只导出 Point/LineString/Polygon 的首个几何，`Multi*` 要素不导出，绝不称其为 Shapefile。
 
 ## 浏览器工作台（map-container client）
 
-`Workbench.tsx` 渲染图例（色块 `role="img"` + 文字范围 + 计数）、时间轴（prev/next/play/pause/slider，全部可键盘操作）、按图例分级的分布图（点击柱 = 刷选，`aria-pressed`）、分页属性表（行按钮选择要素）与导出按钮；`role="status"` 播报选择数、当前帧与导出结果。播放由组件定时器驱动 `axisAdvance`，不产生模型事件。文案全部走 `mapContainer` locale 字典（zh/en）。
+`Workbench.tsx` 渲染状态行（`role="status"` 播报选择数与固定帧，并标注缺测帧）、时间轴（prev/next/play/pause/slider，全部可键盘操作）、按图例分级的分布图（类柱点击 = 刷选，`aria-pressed`）、分页属性表（行按钮选择要素）、导出按钮与导出状态、以及最近操作的 AOI/变更历史；播放由组件定时器驱动 `axisAdvance`，不产生模型事件。图例芯片由统一图层行面板（`LayerPanel.tsx`）渲染：每个类芯片 `role="img"` 标注类号，展开图例列出半开区间与颜色；图例仍由 `legendOf(style)` 派生。文案全部走 `mapContainer` locale 字典（zh/en）。
 
 ## 测试
 
 - `map/spatial-viz/tests/*.spec.mjs`：契约（词表/括号规则/版本再生/时区/窗口）、分类（秩中点/诚实收缩/半开语义/比值/尺寸/统一域）、时间轴（UTC 与 Asia/Shanghai 日历、缺测帧、状态机确定性、无模型字段）、联动（分箱复用/筛选摘要/选择语义/导出冻结）。
-- `map/tools/tests/viz-tools.spec.mjs`：真实 catalog + 投影的创建→发布→加载→分类折叠→对比链路，及全部响亮拒绝。
-- `map/map-container/tests/projection.spec.mjs`（set-style 折叠/拒绝）与 `tests/occurrence.spec.mjs`（类符号渲染/帧过滤/高亮/测试句柄）。
-- 真实 Web ARIA：composition lane 的 workbench 用例（真实 app + Playwright 角色与键盘断言）。
+- `map/tools/tests/viz-tools.spec.mjs`：真实 catalog + 投影的创建→发布→加载→分类折叠→对比→聚合链路，及全部响亮拒绝。
+- `map/tools/tests/source-method-parity.spec.mjs`：密度的闭式核对、KML 固定 revision 导出与「不是 Shapefile」限制。
+- `map/map-container/tests/projection.spec.mjs`（set-style 折叠/拒绝）与 `tests/occurrence.spec.mjs`（类符号渲染/帧过滤/高亮/测试句柄）；操作对话框的展开图例由 `tests/card-audit.spec.mjs` 覆盖。
+- 真实 Web ARIA：composition lane 的 workbench 用例（真实 app + Playwright 角色与键盘断言，含图层行图例芯片与画布配色对照）。

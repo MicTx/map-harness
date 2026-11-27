@@ -37,10 +37,10 @@ pnpm run test:snapshot -t 'map-(analyst-turn|facility-decision)'
 
 ```sh
 node map/bin/build-web.mjs
-node --test --test-name-pattern='facility decision:' map/arcgis-mcp/tests/composition.e2e.mjs
+node --test --test-name-pattern='spatial workflow: facility coverage comparison' map/arcgis-mcp/tests/composition.e2e.mjs
 ```
 
-默认用例通过真实 map-web 应用与 Chromium 执行已录制模型的工具决策，检查两项覆盖人数、地图分级、属性表、刷选高亮、固定版本导出、页面重载和当前 revision 的 rendered 回执。模型传输在默认 lane 中是本地回放，业务工具与存储不是替身。服务端口由系统分配；浏览器使用 ANGLE/SwiftShader 满足 ArcGIS 的 WebGL2 要求。
+默认用例通过真实 map-web 应用与 Chromium 执行已录制模型的工具决策，检查两项覆盖人数、地图分级、属性表、刷选高亮、固定版本导出、页面重载和当前 revision 的 rendered 回执。模型传输在默认 lane 中是本地回放，业务工具与存储不是替身。用例服务以 `--port 0` 由系统分配端口；产品默认端口仍为 `6425`。浏览器使用 ANGLE + swiftshader 启动参数满足 ArcGIS 的 WebGL2 要求。
 
 已有有效模型凭据时，以 `MAP_FACILITY_LIVE=1` 运行同一用例，改用部署的真实模型。`MAP_FACILITY_ARTIFACTS` 可指定截图目录；截图只包含临时工作区的合成案例，不采集用户会话。实时模型输出不要求逐字相同，但同样必须满足人数、地图、联动和恢复断言。
 

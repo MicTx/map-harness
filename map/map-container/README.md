@@ -1,15 +1,69 @@
+---
+description: "Give a session one live map state that the model edits through map tools and the person edits through the ArcGIS layer panel, restored on reload and replay."
+kind: package-reference
+---
+
 # @map-harness/map-container
 
 English | [中文](README.zh.md)
 
-The session's map: the authoritative `mapContainer` session projection and
-its `ctx.map` read face on the host, and the ArcGIS map tab — canvas, layer
-management panel — in the browser. One map state, folded from
-the session log; the model writes through `map_*` tools and the user draws,
-edits, removes, undoes, and exports annotations through the layer panel's
-change route.
+## Summary
 
-## Host half
+The session's live map: the model reads and changes one map state through the `map_*` tools, and the person pans, zooms, styles layers, and draws annotations in the ArcGIS tab. Both sides share one revisioned state folded from the session log, so a reload, replay, or session switch restores the same layers, camera, candidates, and annotations. The package also owns the observation and source routes; the map tools read the state through `ctx.map`.
+
+## Table of Contents
+
+- [Use this package](#use-this-package)
+- [Understand the implementation](#understand-the-implementation)
+- [Further Exploration](#further-exploration)
+- [Model Experience](#model-experience)
+- [Known Limitations and Deferred Work](#known-limitations-and-deferred-work)
+- [Dev Note](#dev-note)
+
+-----
+
+<a id="use-this-package"></a>
+## Use this package
+
+Mount the plugin in a composition whose Agent preset exposes the map tools and whose web client loads the map tab.
+
+### When to choose it
+
+Choose it for sessions that need one shared map state: the model writes through `map_*` tools and the person edits through the layer panel. Omit the map profile when a session should not expose or capture a map; without this package the tools have no map service to resolve.
+
+### Minimal configuration
+
+```yaml
+- id: map-container
+  name: '@map-harness/map-container'
+```
+
+| Field | Default | Meaning |
+|---|---|---|
+| `sources` | built-in presets | Deployment overrides for basemap presets, credential bindings, custom source descriptors, catalog limits, the outbound proxy, and the source-write lock. |
+| `observation.capturePolicy` | `unverified` | Source-policy metadata recorded with an observation; it does not block capture. |
+| `observation.maxBytes` | `8388608` | Maximum admitted PNG bytes. |
+| `observation.maxPixels` | `16777216` | Maximum decoded pixels. |
+| `observation.maxDimension` | `8192` | Maximum decoded width or height. |
+| `observation.maxPending` / `maxEarlyClaims` | `64` / `64` | Pending observation waits and parked early claims, each capped at `1024`. |
+| `observation.vision` | absent | Deployment-authorized `provider`/`model` route a text-only Session may delegate an observation to. |
+| `interaction.maxActions` / `maxObservations` / `maxElapsedMs` | unlimited | Per-turn `map_use` attempts, `map_observe` attempts, and wall-clock limit. |
+| `interaction.maxPending` / `maxEarlyClaims` | `16` / `16` | Pending interaction waits and parked early claims. |
+| `wayback.cacheTtlMs` | `300000` | Catalog refresh interval, at most one day. |
+| `wayback.localCacheMaxEntries` | `64` | Local-evidence cache entries, at most `256`. |
+| `wayback.maxConcurrentRequests` / `requestTimeoutMs` | `4` / `15000` | Concurrent catalog requests and per-request timeout (at most `120000`). |
+
+An absent config takes every default; a nonsensical value fails the plugin at load instead of clamping. The accepted schema is owned by [`src/plugin.ts`](src/plugin.ts), and the shipped mount row is in [`map/profiles/map-web/cordis.patch.yml`](../profiles/map-web/cordis.patch.yml).
+
+-----
+
+<a id="understand-the-implementation"></a>
+## Understand the implementation
+
+<details>
+<summary>Implementation internals — click to expand</summary>
+
+### Host half
 
 Continuous `map_use` control lives in `mapContainer.interaction`. Per-turn `interaction.maxActions`, `maxObservations` and `maxElapsedMs` are optional and unlimited by default. Recoverable failures leave the turn open; user takeover and accepted `finish` stop it. `/api/map/use` pairs bounded claim/result/cancel messages with the session; replay restores state without repeating SDK actions. See [continuous map use](../docs/map-container-binding.md#连续地图操作map_use).
 
@@ -37,10 +91,12 @@ The `visualProposals` projection field holds model sketch and target candidates 
   agent's next-step inbox without waking the model. The fold applies the
   notice when its inbox insertion commits, so the response returns after the
   map changed; the later claim replays as the same operation id. Annotation
-  records use the `[map-user-change v3]` marker; imagery-display records use
+  records use the `[map-user-change v3]` marker; ordinary layer, basemap, and
+  state changes use `[map-user-change v2]`; imagery-display records use
   the `[map-user-change v7 imagery]` marker; settled-camera view records use
-  the `[map-user-change v8 view]` marker; and v1/v2 notices remain readable
-  but cannot carry annotation fields. The host derives annotation feature ids,
+  the `[map-user-change v8 view]` marker. The remaining proposal and
+  visual-change markers are listed under Model Experience; v1 notices remain
+  readable but cannot carry annotation fields. The host derives annotation feature ids,
   timestamps, whitelisted properties, inverse snapshots, and summaries, and a
   retried applied operation id returns the accepted revision without another
   notice. Updates carry the feature's accepted update timestamp as a
@@ -100,7 +156,7 @@ The `visualProposals` projection field holds model sketch and target candidates 
   answers with one fixed code — `unknown-session`, `unknown-ref`,
   `unauthorized`, `digest-mismatch` — and no storage detail.
 
-## Browser half
+### Browser half
 
 The map's stop control remains visible at 390px and follows both themes. Pointer, wheel, drawing and keyboard takeover invalidate local pending actions immediately; the host notice persists that stop across refreshes. An accepted camera target is not proof of a rendered view: suppressed pending camera writes report `CAMERA_SUPERSEDED`, while already accepted logical revisions remain in history. Pixel pan/zoom preserve the captured SDK scale and rotation; SDK LOD zoom is not the application's scale-based zoom.
 
@@ -229,7 +285,7 @@ The map's stop control remains visible at 390px and follows both themes. Pointer
   drag and wheel reach the view surface; the composition lane asserts the live
   camera moves and the newest report matches it.
 
-## Conversation tool cards
+### Conversation tool cards
 
 - `src/tool-cards/` is the one display dictionary for every spatial tool: a Chinese action phrase, an icon category, and the argument and result fields a card lists, with unit-aware formatters (meters/kilometers, m²/km², WGS84 degrees, counts). Geometry arrays and large JSON never reach a card; malformed or streaming arguments degrade to the action name.
 - The browser registers one keyed `tool.call.toolview` row (`MapToolCard`) per dictionary entry. The row derives its title (`action · subject`), argument and result lines, and failure code from the durable call slice alone, so live streaming and replay render the same; tools outside the dictionary keep the generic row.
@@ -237,7 +293,7 @@ The map's stop control remains visible at 390px and follows both themes. Pointer
 - Adding or renaming a spatial tool requires a dictionary entry in the same change. `map-tools` re-types the dictionary as `Record<SpatialToolName, …>` so a missing entry fails `tsc`, `withPresentation` refuses an unlisted tool at registration, and `tools/tests/presentation.spec.mjs` asserts the dictionary keys equal the catalog.
 - The map tab overlays and the tool rows share `map-theme.ts`, a stylesheet over the host `--dsw-*` design tokens, so they follow the host light and dark themes.
 
-## Versions and evidence
+### Versions and evidence
 
 `SymbolStyle` and `FeatureOverrides` version tokens (`sym-…@v1`,
 `ovr-…@v1`) derive from a digest over every field, so a record cannot be
@@ -256,6 +312,41 @@ presentation, and `map-container → spatial-catalog` for resource/artifact
 reads. Upstream `packages/` never imports this package; the plugin enters
 through the loader like any other.
 
+</details>
+
+-----
+
+<a id="further-exploration"></a>
+## Further Exploration
+
+- [Map-container binding contract](../docs/map-container-binding.md) — host/browser binding, continuous map use, and source routes.
+- [Verification matrix](../docs/verification-matrix.md) — package checks and composition evidence.
+- [Map-layers contract](../layers/README.md) — presentation vocabulary this package folds and renders.
+- [Map tools](../tools/README.md) — the model-facing tools that read this state.
+- [Observation capture upgrade guide](../../docs/upgrade-guide/v0.2.1-rc.3/map-observation-capture/guide.md) — the observation record change.
+
+<a id="model-experience"></a>
+## Model Experience
+
+### User map-change notice
+
+#### Request context and condition
+
+The browser change route admits one bounded change and injects one `map-user-change` notice into the live Agent's next-step inbox without waking the model. The notice reaches the model only when the next turn claims the inbox; cancelling the Agent with inbox clearing before that turn removes the notice while the map keeps the change. The summary line is in the user's locale; `userChangeNoticeText` appends the marker and the record JSON.
+
+#### What the model sees
+
+The exact text is the summary line, then the marker, then the record JSON on its own line. The marker identifies the record vocabulary: `[map-user-change v2]` for ordinary layer, basemap, and state changes; `[map-user-change v3]` for annotation operations; `[map-user-change v4]` for a prepared Wayback comparison; `[map-user-change v5]` for visual-proposal decisions; `[map-user-change v6 visual-change]` for visual-change decisions; `[map-user-change v7 imagery]` for imagery display; `[map-user-change v8 view]` for a settled camera. `[map-user-change v1]` remains readable but cannot carry annotation fields. The record carries the operation id, the target revision, and the admitted change.
+
+#### Token effect
+
+One notice adds the summary line, the marker, and a bounded record of at most 16 KiB to the inbox message the next turn reads; it replaces no earlier tokens.
+
+#### KV Cache effect
+
+A notice is appended when the inbox claims it, after the request tokens already in the Session, so it does not rewrite earlier tokens. Clearing the inbox before that claim removes the notice instead of appending it.
+
+<a id="known-limitations-and-deferred-work"></a>
 ## Known Limitations and Deferred Work
 
 - A user change applies when its notice enters the inbox. Cancelling the
@@ -265,3 +356,13 @@ through the loader like any other.
   properties (widths, dashes) still go through the conversation.
 - Annotation geometry accepts Point, LineString, and single-ring Polygon;
   GeoJSON Multi* and polygon holes are not editable in this version.
+
+<a id="dev-note"></a>
+### Dev Note
+
+<details>
+<summary>Working context for maintainers — click to expand</summary>
+
+Keep the projection fold a pure synchronous function of the session log; every new accepted `map_*` result needs its meta kind, fold branch, and replay assertion in `tests/` (`tests/projection.spec.mjs`). Tool-card copy lives in `src/tool-cards/` and must gain an entry with every spatial tool.
+
+</details>

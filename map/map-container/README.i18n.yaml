@@ -2,21 +2,66 @@
 # section, a hash of its English and Chinese blocks outside code blocks and generated regions.
 # After editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write map/map-container/README.md
+/:
+  en: 177d1ddf62fa44c5
+  zh: 2c13667dcf8414d0
 /map-harness-map-container:
-  en: a0af0a52b757d209
-  zh: af0312ccf87678c3
-/map-harness-map-container/host-half:
-  en: bf54d6f367bb882d
-  zh: 99a2c98667c3b3ce
-/map-harness-map-container/browser-half:
-  en: 606cbb4f1dda1851
-  zh: f89ceec33651bd76
-/map-harness-map-container/conversation-tool-cards:
-  en: 92874675aaaf2222
-  zh: 8b2c1870598add6b
-/map-harness-map-container/versions-and-evidence:
-  en: f419b19789b45a97
-  zh: f57f5cff2305c60b
+  en: a79314cf70ee2491
+  zh: 9e9ee503445f5b8e
+/map-harness-map-container/summary:
+  en: b58677869c10b600
+  zh: 0fe6c359ead77e65
+/map-harness-map-container/table-of-contents:
+  en: d152484eb41ac6b4
+  zh: 725b47765ee8f30b
+/map-harness-map-container/use-this-package:
+  en: 81936a4a1d2a2cc9
+  zh: fc6fc83fa404b472
+/map-harness-map-container/use-this-package/when-to-choose-it:
+  en: bf469112c9d02c2b
+  zh: f84f319061cf9f9b
+/map-harness-map-container/use-this-package/minimal-configuration:
+  en: 651332a8e2a0317f
+  zh: bcf2165c9edb0029
+/map-harness-map-container/understand-the-implementation:
+  en: 42b15ac6321706aa
+  zh: c8011788e17a2cd6
+/map-harness-map-container/understand-the-implementation/host-half:
+  en: 44bcfe26fff44dae
+  zh: b29a80fe82ef796e
+/map-harness-map-container/understand-the-implementation/browser-half:
+  en: c189bb579d57c494
+  zh: 28ca49c49bd89e79
+/map-harness-map-container/understand-the-implementation/conversation-tool-cards:
+  en: b69bc7630c7a188c
+  zh: 83841d10751490ad
+/map-harness-map-container/understand-the-implementation/versions-and-evidence:
+  en: 98e7cdbf934e5465
+  zh: e8d37336f83e9a26
+/map-harness-map-container/further-exploration:
+  en: 52494cde090e22e3
+  zh: 4e1e56100728d685
+/map-harness-map-container/model-experience:
+  en: 215e7ba838619b7b
+  zh: a311da3843709f90
+/map-harness-map-container/model-experience/user-map-change-notice:
+  en: 7871b2db98b99ffa
+  zh: 4322c4ee4096c793
+/map-harness-map-container/model-experience/user-map-change-notice/request-context-and-condition:
+  en: 2e330e0a0e9443e9
+  zh: b7c97b55de396709
+/map-harness-map-container/model-experience/user-map-change-notice/what-the-model-sees:
+  en: e611317dcb3a39f8
+  zh: 502242bae87389c7
+/map-harness-map-container/model-experience/user-map-change-notice/token-effect:
+  en: 26486d5e50159776
+  zh: 8bf9709b4b62b5ae
+/map-harness-map-container/model-experience/user-map-change-notice/kv-cache-effect:
+  en: 9d7f258341656902
+  zh: 070ae97ec1ef447d
 /map-harness-map-container/known-limitations-and-deferred-work:
-  en: 844d54a54c4681d9
-  zh: b860f61f1fbb20b8
+  en: 30af0d495484fdc9
+  zh: deab3c1518d1811e
+/map-harness-map-container/known-limitations-and-deferred-work/dev-note:
+  en: b8bb11c8a749df92
+  zh: fd4073fbbc0a1d64

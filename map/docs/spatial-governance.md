@@ -1,6 +1,6 @@
 # 空间敏感数据治理与授权（spatial governance）
 
-本文是 map 层敏感数据治理的权威文档：`@map-harness/spatial-catalog` 拥有的授权域、部署租户、ACL grant、派生权限继承、审计 trail、授权域隔离缓存、副本登记与召回，以及各消费入口的拒绝语义。设计依据是 `.spec/docs/2026-09-23_docs-spatial-agent-architecture_design.md` §6.2/§7.2/§15.4（「ACL 在候选与片段生成前过滤，读取与执行再检查」「派生项继承限制，缓存键包含授权域/版本」）与审计 D06（权限主体来自 Host/provider，不来自模型参数或 MCP annotation）。契约版本 `spatial-governance@2`（`map/spatial-catalog/src/governance.ts`）；`@1` 语义全部保留——不声明租户的部署运行在默认租户 `default` 下，行为与既有用例一致。
+本文是 map 层敏感数据治理的权威文档：`@map-harness/spatial-catalog` 拥有的授权域、部署租户、ACL grant、派生权限继承、审计 trail、授权域隔离缓存、副本登记与召回，以及各消费入口的拒绝语义。权限主体只来自 Host/provider，不来自模型参数或 MCP annotation；ACL 在候选与片段生成前过滤，读取与执行再检查；派生项继承限制，缓存键包含授权域与版本。契约版本 `spatial-governance@2`（`map/spatial-catalog/src/governance.ts`）；`@1` 语义全部保留——不声明租户的部署运行在默认租户 `default` 下。治理表与迁移阶梯见 [storage-lifecycle.md](storage-lifecycle.md#迁移)。
 
 ## 模型与不变式
 
