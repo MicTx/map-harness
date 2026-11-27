@@ -3,8 +3,8 @@
 # After editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write map/release/public/README.md
 /map-harness:
-  en: d09c0ed648cbc5c6
-  zh: 9ba2f4ff51cd84ad
+  en: 50b868d001f7f60d
+  zh: 1d00f163def7f47d
 /map-harness/install:
   en: 98905c86b04323c3
   zh: 4e1a8f8e43f54cb4
@@ -12,5 +12,5 @@
   en: b1b5d582292b57ea
   zh: 721f6ee65b6d19b8
 /map-harness/license:
-  en: 4791e2ca9c98244a
-  zh: 97a8d5f197b7860f
+  en: 00812be179cdb548
+  zh: 353d668a36270495

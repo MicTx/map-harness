@@ -2,6 +2,7 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import type { PropsLocale, PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots'
 import type { BrowserStorage } from '@deepseek-ai/dsh-client-store'
+import type { WaybackCatalogOwner } from './wayback-catalog.ts'
 import type { MapContainerState, MapViewRecord } from '../registry.ts'
 import type { MapContainerWire } from './state.ts'
 import type { MapOccurrence, MapImageUrl } from './face.ts'
@@ -30,6 +31,8 @@ export type MapTabBodyProps = PropsRuntime<'sidebar.right.pane.tab'> & PropsLoca
   readonly imageUrl?: MapImageUrl
   /** Instance-scoped browser persistence supplied by the client composition. */
   readonly browserStorage?: BrowserStorage
+  /** Plugin-owned Wayback release catalog, handed to the panel only after the map is mounted. */
+  readonly waybackCatalog?: WaybackCatalogOwner
 }
 
 /**
@@ -40,7 +43,7 @@ export type MapTabBodyProps = PropsRuntime<'sidebar.right.pane.tab'> & PropsLoca
  * @param props - sidebar occurrence plus the projection and locale kits.
  * @returns the map surface.
  */
-export function MapTabBody({ useTabInfo, useProjection, useResource, sessionId, t, viewportSubmit, panelSubmit, changeSubmit, imageUrl, browserStorage }: MapTabBodyProps): ReactNode {
+export function MapTabBody({ useTabInfo, useProjection, useResource, sessionId, t, viewportSubmit, panelSubmit, changeSubmit, imageUrl, browserStorage, waybackCatalog }: MapTabBodyProps): ReactNode {
   const { tab } = useTabInfo()
   const holder = useRef<HTMLDivElement | null>(null)
   const wire = useProjection('mapContainer')
@@ -220,8 +223,10 @@ export function MapTabBody({ useTabInfo, useProjection, useResource, sessionId, 
 
   const panel = (
     <UnifiedMapPanel
+      key={sessionId}
       wire={wire!} sessionId={sessionId} occurrenceKey={tab.id} occurrence={occurrenceOf} t={t} useResource={useResource}
       panelSubmit={panelSubmit} changeSubmit={changeSubmit} imageUrl={imageUrl} liveViewport={liveViewport}
+      {...(waybackCatalog === undefined ? {} : { waybackCatalog })}
       open={panelOpen}
       onOpenChange={(open: boolean) => { panelTouched.current = true; setPanelOpen(open) }}
     />

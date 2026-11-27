@@ -19,6 +19,11 @@ import { MapToolCard } from './MapToolCard.tsx'
 import { installMapTheme } from './map-theme.ts'
 import { TOOL_CARD_DICTIONARY } from '../tool-cards/index.ts'
 import { mapSourceResourceProvider } from './source-client.ts'
+import { createWaybackCatalogOwner } from './wayback-catalog.ts'
+
+const WAYBACK_CATALOG_TTL_MS = 300_000
+const WAYBACK_CATALOG_TIMEOUT_MS = 15_000
+const WAYBACK_CATALOG_MAX_BODY_BYTES = 1 << 20
 
 /** Required browser services for session-bound map navigation and the session queue. */
 export const inject = ['slots', 'sidebarRightTabs', 'sidebarRight', 'locale', 'sessions', 'resources', 'uiConversation', 'browserStorage']
@@ -43,6 +48,11 @@ export function apply(ctx: ClientContext): void {
   const binding = createMapSessionBinding(ctx.sidebarRight)
   ctx.effect(() => () => binding.dispose(), 'map-container: session binding')
   ctx.effect(() => ctx.resources.register(mapSourceResourceProvider()), 'map-container: source catalog resource')
+  // React-free and plugin-owned: one shared catalog request, cache, and listener set for every open map.
+  const waybackCatalog = createWaybackCatalogOwner({
+    storage: ctx.browserStorage as BrowserStorage, ttlMs: WAYBACK_CATALOG_TTL_MS, timeoutMs: WAYBACK_CATALOG_TIMEOUT_MS, maxBodyBytes: WAYBACK_CATALOG_MAX_BODY_BYTES,
+  })
+  ctx.effect(() => () => waybackCatalog.dispose(), 'map-container: wayback catalog owner')
 
   function BoundMapTab(props: MapTabBodyProps): ReactNode {
     const { tab } = props.useTabInfo()
@@ -54,6 +64,7 @@ export function apply(ctx: ClientContext): void {
       ...props, key: props.sessionId, panelSubmit, changeSubmit,
       imageUrl: (sessionId, attachment) => ctx.uiConversation.imageUrl(sessionId, attachment),
       browserStorage: ctx.browserStorage as BrowserStorage,
+      waybackCatalog,
     })
   }
   const action = (props: Omit<MapSessionActionProps, 'binding'>): ReactNode =>

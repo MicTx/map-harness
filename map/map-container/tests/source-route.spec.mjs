@@ -485,19 +485,19 @@ test('production registration removes every route before disposal settles', asyn
   }
   const ctx = { get: name => name === 'connection' ? connection : name === 'sessionController' ? {} : undefined }
   const dispose = registerMapSourceRoutes(ctx, service)
-  assert.equal(registered.size, 4)
+  assert.equal(registered.size, 5)
   const firstDisposal = dispose()
   assert.equal(registered.size, 0)
-  assert.equal(pending.length, 4)
+  assert.equal(pending.length, 5)
 
   const disposeAgain = registerMapSourceRoutes(ctx, service)
-  assert.equal(registered.size, 4)
+  assert.equal(registered.size, 5)
   for (const completion of pending.splice(0)) completion.resolve()
   await firstDisposal
-  assert.equal(registered.size, 4)
+  assert.equal(registered.size, 5)
   const secondDisposal = disposeAgain()
   assert.equal(registered.size, 0)
-  assert.equal(pending.length, 4)
+  assert.equal(pending.length, 5)
   for (const completion of pending.splice(0)) completion.resolve()
   await secondDisposal
 })
@@ -542,7 +542,10 @@ test('production registration reads exact session projections through Connection
     '/api/map/sources/render',
     '/api/map/sources/resource',
     '/api/map/wayback',
+    '/api/map/wayback/admit',
   ])
+  assert.deepEqual(registered.get('/api/map/wayback/admit').methods, ['POST'])
+  assert.equal(registered.get('/api/map/wayback/admit').requestBody, 'streaming')
 
   const catalog = await registered.get('/api/map/sources/catalog').fetch(request('/api/map/sources/catalog?sessionId=live&provider=esri&pageSize=1'))
   assert.equal(catalog.status, 200)

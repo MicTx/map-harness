@@ -123,7 +123,7 @@
 - 浏览器引擎 **ArcGIS Maps SDK for JavaScript（`@arcgis/core` 5.1）**：2D 任意数字 WKID 可在运行时切换
   （WKID 变化重建 occurrence view，图层由 SDK 投影引擎按 view WKID 重投影），SceneView global 原生支持 CGCS2000，local 场景支持任意投影坐标系（3D）。工具 schema 与 view 代码均不接受 WKT 输入。
 - **零 key 默认与显式来源**：不传 Esri `basemap`/`ground` 枚举、不请求 geocoder。未选择来源时，Web Mercator 引擎（显示记录 `wkid=4326` 或 `3857`）用 ArcGIS Online 公开 `World_Imagery` XYZ 瓦片作底图（无 API token，瓦片 3857）；不强制把 geographic 记录的 view 设成 4326。显式选择经 session 绑定的 `/api/map/sources/render` 取公开 carrier recipe，浏览器只向 `/api/map/sources/resource` 发生身份绑定请求；ArcGIS 缓存服务用原生 `TileLayer`，普通 XYZ 用 `WebTileLayer`，WMTS/动态 export 各用原生 carrier。其他投影 WKID（如 4547）只在来源与视图兼容时通过原生缓存或受控动态 export，不静默换厂商或改相机。WKID 引擎变化或 2D/3D 切换会重建 occurrence 的 ArcGIS view（旧图层句柄一并销毁）。后续 `map_set_view` 只在 center/zoom/wkid 真变化时同步相机，图层增删不拉回视窗。
-- **Wayback 固定 release**：选择仅校验[本地已同步目录](../map-container/README.zh.md#map-harness-map-container)；渲染时核验 capabilities，以 `WMTSLayer` 经受控资源路由按视口请求固定 release。恢复缺失版本时保留选择并报错，不改成最新版本。局部早期/近期只按当前关注点的不同瓦片选取；中心和四角元数据采样只描述五个点，日期或覆盖不一致为 `partial`，缺少可判定数据为 `unknown`，均不代表全范围同期。
+- **Wayback 固定 release**：浏览器[独立拉取官方发布目录](../map-container/README.zh.md#浏览器半)；点选时宿主核验单个 release，渲染仍以 `WMTSLayer` 经受控资源路由按视口请求该版本。恢复缺失版本时保留选择并报错，不改成最新版本。局部早期/近期只按当前关注点的不同瓦片选取；中心和四角元数据采样只描述五个点，日期或覆盖不一致为 `partial`，缺少可判定数据为 `unknown`，均不代表全范围同期。
   Esri MLA 要求展示数据署名；occurrence view 以 `ui: { components: [] }` 构造，移除了 SDK 默认 UI（含 attribution 组件），「Powered by Esri」不渲染在地图容器内。本仓库部署于内网，署名省略为已确认决策（2026-09-22）；图层数据源以 `copyright` 字符串保留在 layer 对象上。
 - 包体：`@arcgis/core` 惰性 chunk 约 64MB（按需加载），主入口 client.js gzip ≈300KB。
 

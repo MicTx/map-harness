@@ -27,9 +27,10 @@ function number(value: string): number {
  * @param body - transport-bounded official capabilities XML.
  * @param releaseId - fixed numeric release, never a latest-version selector.
  * @param layerIdentifier - official WMTS layer id from the release catalog.
+ * @param publishedAt - when supplied, the exact release date required in the matched layer title.
  * @returns validated matrix metadata for the controlled WMTS compiler.
  */
-export function parseWaybackCapabilities(body: Uint8Array, releaseId: number, layerIdentifier: string): WmtsMetadata {
+export function parseWaybackCapabilities(body: Uint8Array, releaseId: number, layerIdentifier: string, publishedAt?: string): WmtsMetadata {
   const capabilities = xmlElement(parseSourceXml(body), 'Capabilities')
   if (xmlAttribute(capabilities, 'version') !== '1.0.0') unavailable()
   const contents = xmlElement(capabilities, 'Contents')
@@ -41,6 +42,7 @@ export function parseWaybackCapabilities(body: Uint8Array, releaseId: number, la
     xmlElements(layer, 'ResourceURL').some(item => item['@_resourceType'] === 'tile' && item['@_template'] === expectedTemplate))
   if (layers.length !== 1) unavailable()
   const layer = layers[0]!
+  if (publishedAt !== undefined && text(layer, 'Title') !== `World Imagery (Wayback ${publishedAt})`) unavailable()
   const nativeLayer = text(layer, 'Identifier')
   if (!/^WB_\d{4}_R\d{2}$/.test(layerIdentifier) || !/^WB_\d{4}_R\d{2}$/.test(nativeLayer)
     || allLayers.filter(item => text(item, 'Identifier') === nativeLayer).length !== 1

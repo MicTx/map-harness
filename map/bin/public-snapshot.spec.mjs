@@ -19,7 +19,7 @@ test('the tool refuses a version that does not match the product version source'
 })
 
 test('dry-run stages the allowlisted tree, audits it, and never writes a remote or a receipt', () => {
-  const before = spawnSync('git', ['ls-remote', 'https://github.com/MicTx/map-harness-public.git', 'refs/heads/main'], { encoding: 'utf8' })
+  const before = spawnSync('git', ['ls-remote', 'https://github.com/MicTx/map-harness.git', 'refs/heads/main'], { encoding: 'utf8' })
   const receiptPath = join(ROOT, receiptPathOf(version))
   const beforeReceipt = existsSync(receiptPath) ? readFileSync(receiptPath, 'utf8') : null
   const report = dryRun(version)
@@ -36,7 +36,7 @@ test('dry-run stages the allowlisted tree, audits it, and never writes a remote 
   assert.match(report.orphanSha, /^[0-9a-f]{40}$/u)
   const afterReceipt = existsSync(receiptPath) ? readFileSync(receiptPath, 'utf8') : null
   assert.equal(afterReceipt, beforeReceipt, 'dry-run leaves the receipt untouched')
-  const after = spawnSync('git', ['ls-remote', 'https://github.com/MicTx/map-harness-public.git', 'refs/heads/main'], { encoding: 'utf8' })
+  const after = spawnSync('git', ['ls-remote', 'https://github.com/MicTx/map-harness.git', 'refs/heads/main'], { encoding: 'utf8' })
   assert.equal(after.stdout, before.stdout, 'dry-run leaves the public main OID untouched')
 })
 

@@ -790,6 +790,18 @@ export interface MapSourceCatalog {
   /** Resolve an official release with the deployment's current permissions. */
   waybackDescriptor(releaseId: number, signal?: AbortSignal): Promise<BasemapSource>
   /**
+   * Resolve the exact identity from the catalog or a previously verified release.
+   * @param source - persisted descriptor to match against current policy and trusted identity.
+   * @returns the release for native materialization.
+   */
+  resolvedWaybackRelease(source: BasemapSource): Parameters<typeof waybackDescriptor>[0]
+  /**
+   * Apply current deployment policy to an independently verified release.
+   * @param release - host-verified official identity.
+   * @returns the canonical public descriptor.
+   */
+  describeWaybackRelease(release: Parameters<typeof waybackDescriptor>[0]): BasemapSource
+  /**
    * Resolve host-only transport data; never expose the result across a wire boundary.
    * @param sourceId - configured id.
    * @param expectedDigest - exact public configuration digest the caller accepted.
@@ -1033,27 +1045,36 @@ export function createMapSourceCatalog(
       throw new SourceCatalogError('SOURCE_CHANGED')
     }
   }
+  const resolvedWaybackRelease = (source: BasemapSource): Parameters<typeof descriptorFor>[0] => {
+    verifyWaybackPolicy(source)
+    const releaseId = waybackReleaseOf(source)
+    if (releaseId === null) throw new SourceCatalogError('SOURCE_RESOURCE_DENIED')
+    const cached = wayback.cachedRelease(releaseId)
+    if (cached !== undefined && isDeepStrictEqual(source, descriptorFor(cached))) return cached
+    const admitted = wayback.verifiedRelease?.(releaseId, source.configDigest)
+    if (admitted !== undefined && isDeepStrictEqual(source, descriptorFor(admitted))) return admitted
+    throw new SourceCatalogError(cached === undefined && admitted === undefined ? 'SOURCE_UNAVAILABLE' : 'SOURCE_CHANGED')
+  }
   const verifyWaybackSource = async (source: BasemapSource, signal?: AbortSignal): Promise<BasemapSource> => {
-    verifyWaybackPolicy(source)
-    const releaseId = waybackReleaseOf(source)
-    if (releaseId === null) throw new SourceCatalogError('SOURCE_RESOURCE_DENIED')
-    const release = wayback.release(releaseId, signal)
-    const expected = descriptorFor(release)
-    if (!isDeepStrictEqual(source, expected)) throw new SourceCatalogError('SOURCE_CHANGED')
-    return expected
+    if (signal?.aborted) throw new SourceCatalogError('SOURCE_CANCELLED')
+    try {
+      return descriptorFor(resolvedWaybackRelease(source))
+    } catch (error) {
+      if (!(error instanceof SourceCatalogError) || error.code !== 'SOURCE_UNAVAILABLE') throw error
+      verifyWaybackPolicy(source)
+      const releaseId = waybackReleaseOf(source)
+      if (releaseId === null) throw error
+      // The original catalog read distinguishes a missing release from a missing snapshot.
+      const expected = descriptorFor(wayback.release(releaseId, signal))
+      if (!isDeepStrictEqual(source, expected)) throw new SourceCatalogError('SOURCE_CHANGED')
+      return expected
+    }
   }
-  const verifyCachedWaybackSource = (source: BasemapSource): void => {
-    verifyWaybackPolicy(source)
-    const releaseId = waybackReleaseOf(source)
-    if (releaseId === null) throw new SourceCatalogError('SOURCE_RESOURCE_DENIED')
-    const release = wayback.cachedRelease(releaseId)
-    if (release === undefined) throw new SourceCatalogError('SOURCE_UNAVAILABLE')
-    if (!isDeepStrictEqual(source, descriptorFor(release))) throw new SourceCatalogError('SOURCE_CHANGED')
-  }
+  const verifyCachedWaybackSource = (source: BasemapSource): void => { resolvedWaybackRelease(source) }
   const waybackSelection = async (source: BasemapSource, signal?: AbortSignal): Promise<BasemapSource> => {
     if (!config.limits.allowChanges) throw new SourceCatalogError('SOURCE_READ_ONLY')
     return verifyWaybackSource(source, signal)
   }
 
-  return Object.freeze({ catalogVersion, networkConfig: config.networkConfig, descriptorOf, list, selection, waybackSelection, verifyWaybackPolicy, verifyWaybackSource, verifyCachedWaybackSource, waybackDescriptor: waybackDescriptorFor, resolvedSource })
+  return Object.freeze({ catalogVersion, networkConfig: config.networkConfig, descriptorOf, list, selection, waybackSelection, verifyWaybackPolicy, verifyWaybackSource, verifyCachedWaybackSource, waybackDescriptor: waybackDescriptorFor, resolvedWaybackRelease, describeWaybackRelease: descriptorFor, resolvedSource })
 }

@@ -4,7 +4,7 @@ English | [中文](README.zh.md)
 
 Map Harness is a self-hosted AI agent for geographic tasks that draws, inspects, and analyzes on a live map.
 
-Download the script-launched Web service from [Releases](https://github.com/MicTx/map-harness-public/releases). This repository publishes the complete allowlisted source tree under the license below; the release attachments are prebuilt Web service archives.
+Download the script-launched Web service from [Releases](https://github.com/MicTx/map-harness/releases). This repository publishes the complete allowlisted source tree under the license below; the release attachments are prebuilt Web service archives.
 
 ## Install
 
@@ -23,4 +23,4 @@ Map Harness keeps its own user data root (`~/.map-harness` by default, override 
 
 ## License
 
-Map Harness is released under the [PolyForm Noncommercial License 1.0.0](https://github.com/MicTx/map-harness-public/blob/main/LICENSE); commercial use requires separate written authorization. Earlier releases retain their supplied licenses. The included DeepSeek Harness code remains available under the MIT License; third-party permissions and any required source offers are preserved in [THIRD_PARTY_NOTICES.md](https://github.com/MicTx/map-harness-public/blob/main/THIRD_PARTY_NOTICES.md).
+Map Harness is released under the [PolyForm Noncommercial License 1.0.0](https://github.com/MicTx/map-harness/blob/main/LICENSE); commercial use requires separate written authorization. Earlier releases retain their supplied licenses. The included DeepSeek Harness code remains available under the MIT License; third-party permissions and any required source offers are preserved in [THIRD_PARTY_NOTICES.md](https://github.com/MicTx/map-harness/blob/main/THIRD_PARTY_NOTICES.md).

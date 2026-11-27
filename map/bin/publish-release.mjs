@@ -25,7 +25,7 @@ import { PUBLIC_FACADE } from './release-content.mjs'
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..')
 
-const DEFAULT_GITHUB = 'https://github.com/MicTx/map-harness-public.git'
+const DEFAULT_GITHUB = 'https://github.com/MicTx/map-harness.git'
 
 /** The LLM install guide every release body carries (`{{version}}` substituted). */
 const INSTALL_GUIDE = join(dirname(fileURLToPath(import.meta.url)), '..', 'docs', 'release-install-guide.md')

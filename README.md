@@ -64,7 +64,7 @@ The public source tree excludes private working notes and session recordings. Re
 
 ## Contributing
 
-Bug reports and observations are welcome in the [issue tracker](https://github.com/MicTx/map-harness-public/issues); external pull requests are not accepted yet. See [CONTRIBUTING.md](CONTRIBUTING.md), the [Code of Conduct](CODE_OF_CONDUCT.md), and [SECURITY.md](SECURITY.md) for private vulnerability reports.
+Bug reports and observations are welcome in the [issue tracker](https://github.com/MicTx/map-harness/issues); external pull requests are not accepted yet. See [CONTRIBUTING.md](CONTRIBUTING.md), the [Code of Conduct](CODE_OF_CONDUCT.md), and [SECURITY.md](SECURITY.md) for private vulnerability reports.
 
 ## License
 

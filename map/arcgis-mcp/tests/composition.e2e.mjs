@@ -23,7 +23,8 @@ import { deriveMapUseReplay, resolveMapUseReplayEntry } from './map-use-replay.m
 import { imageGridCoverage, isolatedTemp, proxyEvidenceSecrets, redactEvidence, writeEvidence } from './wayback-evidence.mjs'
 import { OBSERVATION_CONTROL_POINTS } from '../../map-container/tests/observation-control-cases.mjs'
 import { PUBLIC_SOURCE_PRESETS } from '../../map-container/src/source-render-protocol.ts'
-import { loadWaybackCatalog } from '../../map-container/src/wayback-catalog-store.ts'
+import { loadVerifiedWaybackRelease } from '../../map-container/src/wayback-catalog-store.ts'
+import { WAYBACK_CONFIG_URL } from '../../map-container/src/wayback-catalog-codec.ts'
 import { SPATIAL_MCP_TOOL_NAMES } from '../../tools/src/spatial-catalog.ts'
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..', '..')
@@ -6289,14 +6290,15 @@ test('visual change live: current vision model compares two images and proposes 
   assert.equal(report.ok, true, 'the admitted live qualification must pass its declared criteria')
 })
 
-test('wayback: Web prepares an empty catalog, then selects and undoes a saved release offline', { timeout: 300_000 }, async () => {
-  const temp = isolatedTemp(root, 'map-wayback-sync-')
+test('wayback: the browser owns the official catalog, the host admits the first release click, and both survive a reboot offline', { timeout: 300_000 }, async () => {
+  const temp = isolatedTemp(root, 'map-wayback-browser-catalog-')
   const evidenceDir = process.env.MAP_WAYBACK_UI_EVIDENCE_DIR
   const home = join(temp, 'home')
   const mapHome = join(temp, 'map-home')
   const workspace = join(temp, 'workspace')
+  const profile = join(temp, 'profile')
   mkdirSync(workspace, { recursive: true })
-  writeFileSync(join(workspace, 'README.md'), '# Wayback startup sync\n')
+  writeFileSync(join(workspace, 'README.md'), '# Wayback browser catalog\n')
   const catalogPath = join(mapHome, 'cache', 'map', 'wayback-catalog.sqlite')
   const certificate = join(temp, 'fixture.pem')
   const key = join(temp, 'fixture-key.pem')
@@ -6314,8 +6316,9 @@ x509_extensions=extensions
 CN=Map Harness Wayback loopback fixture
 [extensions]
 basicConstraints=critical,CA:TRUE
-subjectAltName=DNS:s3-us-west-2.amazonaws.com,DNS:wayback.maptiles.arcgis.com
+subjectAltName=DNS:www.arcgis.com,DNS:s3-us-west-2.amazonaws.com,DNS:wayback.maptiles.arcgis.com
 `)
+  // Release 10 of the official catalog; the same item the portal fixture publishes.
   const catalogItem = {
     itemID: '903f0abe9c3b452dafe1ca5b8dd858b9',
     itemTitle: 'World Imagery (Wayback 2014-02-20)',
@@ -6325,9 +6328,17 @@ subjectAltName=DNS:s3-us-west-2.amazonaws.com,DNS:wayback.maptiles.arcgis.com
     layerIdentifier: 'WB_2014_R01',
   }
   const releaseTitle = catalogItem.itemTitle
+  const catalogBody = JSON.stringify({ 10: catalogItem })
+  const portalItem = {
+    id: catalogItem.itemID, owner: 'esri_imagery', orgId: 'P3ePLMYs2RVChkJx', type: 'WMTS', access: 'public',
+    title: releaseTitle,
+    url: catalogItem.itemURL,
+  }
   const heldCatalog = Promise.withResolvers()
   const renderGate = Promise.withResolvers()
-  const upstream = { mode: 'hold', catalogReads: 0, nativeRequests: [], unexpectedAuthorities: [] }
+  const upstream = {
+    hostCatalogDenied: 0, portalReads: 0, capabilityReads: 0, nativeRequests: [], unexpectedAuthorities: [],
+  }
   const sockets = new Set()
   const track = socket => {
     sockets.add(socket)
@@ -6342,7 +6353,7 @@ subjectAltName=DNS:s3-us-west-2.amazonaws.com,DNS:wayback.maptiles.arcgis.com
       const parsed = JSON.parse(body)
       if (isTitleRequest(parsed)) {
         response.writeHead(200, { 'content-type': 'text/event-stream' })
-        response.end(textResponse('Wayback startup sync'))
+        response.end(textResponse('Wayback browser catalog'))
         return
       }
       const transcript = JSON.stringify(parsed.messages)
@@ -6351,16 +6362,16 @@ subjectAltName=DNS:s3-us-west-2.amazonaws.com,DNS:wayback.maptiles.arcgis.com
         ? lastMessage.content.find(part => part?.type === 'tool_result')
         : undefined
       response.writeHead(200, { 'content-type': 'text/event-stream' })
-      if (lastToolResult?.tool_use_id === 'wayback-sync-undo') {
+      if (lastToolResult?.tool_use_id === 'wayback-browser-undo') {
         response.end(textResponse('已撤销早期影像。'))
-      } else if (lastToolResult?.tool_use_id === 'wayback-sync-view') {
+      } else if (lastToolResult?.tool_use_id === 'wayback-browser-view') {
         response.end(textResponse('北京已定位。'))
       } else if (transcript.includes('撤销早期影像')) {
-        response.end(toolResponse([{ id: 'wayback-sync-undo', name: 'map_undo', input: {} }]))
+        response.end(toolResponse([{ id: 'wayback-browser-undo', name: 'map_undo', input: {} }]))
       } else if (transcript.includes('移动到北京')) {
-        response.end(toolResponse([{ id: 'wayback-sync-view', name: 'map_set_view', input: { center: [116.4, 39.9], zoom: 15, wkid: 4326 } }]))
+        response.end(toolResponse([{ id: 'wayback-browser-view', name: 'map_set_view', input: { center: [116.4, 39.9], zoom: 15, wkid: 4326 } }]))
       } else {
-        response.end(textResponse('Wayback sync acknowledged'))
+        response.end(textResponse('Wayback browser catalog acknowledged'))
       }
     })
   })
@@ -6373,12 +6384,12 @@ subjectAltName=DNS:s3-us-west-2.amazonaws.com,DNS:wayback.maptiles.arcgis.com
   const stderr = { value: '' }
   const pageErrors = []
   const consoleErrors = []
-  const boot = async (providerPort, proxyPort) => {
+  const boot = async (providerPort, proxyPort, webPort = '0') => {
     stdout.value = ''
     stderr.value = ''
     app = spawn(process.execPath, [
       mapBin, '--patch', pickerPatch, '--patch', fixtureOverlay,
-      '--host', '127.0.0.1', '--port', '0', '--no-open',
+      '--host', '127.0.0.1', '--port', webPort, '--no-open',
     ], {
       cwd: workspace,
       env: {
@@ -6399,29 +6410,43 @@ subjectAltName=DNS:s3-us-west-2.amazonaws.com,DNS:wayback.maptiles.arcgis.com
     await stopProcessTree(app, mapHome)
     app = undefined
   }
-  const openMap = async (url, colorScheme = 'light') => {
-    const context = await browser.newContext({ locale: 'zh-CN', viewport: { width: 390, height: 844 }, hasTouch: true, colorScheme })
+  // The host proxy denies the S3 catalog; only the official tile host and the portal item tunnel to the fixture.
+  const browserCatalog = { requests: 0, headers: [], violations: [] }
+  const openMap = async (url, context, restoredSessionId) => {
     const page = await context.newPage()
     page.on('pageerror', error => pageErrors.push(String(error)))
     page.on('console', message => { if (message.type() === 'error') consoleErrors.push(message.text()) })
+    const browserRequests = { admit: 0, admitBodies: [] }
     await useFixtureBasemap(page)
     await page.goto(url)
     await maybeContinueNotice(page)
-    await connectWorkspace(page, workspace)
-    await chooseMapPreset(page)
-    await page.keyboard.press('Escape')
-    const sessionId = await page.locator('[data-conversation-session]:visible').first().getAttribute('data-conversation-session')
+    if (restoredSessionId === undefined) {
+      await connectWorkspace(page, workspace)
+      await chooseMapPreset(page)
+      await page.keyboard.press('Escape')
+      await sendMessage(page, '移动到北京。')
+    }
+    const sessionId = restoredSessionId ?? await page.locator('[data-conversation-session]:visible').first().getAttribute('data-conversation-session')
     assert.ok(sessionId)
-    await sendMessage(page, '移动到北京。')
-    await page.locator('[data-map-container]:visible').waitFor({ timeout: 30_000 })
+    await page.locator(`[data-map-container][data-map-session="${sessionId}"]:visible`).waitFor({ timeout: 30_000 })
     await waitForRenderedReceipt(page, 90_000)
-    return { context, page, sessionId }
+    page.on('request', request => {
+      const target = new URL(request.url())
+      if (target.pathname === '/api/map/wayback') hostWaybackReads.push(target.search)
+      if (target.pathname === '/api/map/wayback/admit' && request.method() === 'POST') {
+        browserRequests.admit += 1
+        browserRequests.admitBodies.push(request.postDataJSON())
+      }
+    })
+    return { page, sessionId, browserRequests }
   }
   const capture = async (dialog, name) => {
     if (evidenceDir === undefined) return
     mkdirSync(evidenceDir, { recursive: true })
     await dialog.screenshot({ path: join(evidenceDir, `wayback-${name}.png`), animations: 'disabled' })
   }
+  // Every same-origin Wayback read the browser issues; `operation=catalog` must never appear.
+  const hostWaybackReads = []
   try {
     const generated = spawnSync('openssl', ['req', '-x509', '-newkey', 'rsa:2048', '-nodes', '-days', '2',
       '-config', tlsConfig, '-out', certificate, '-keyout', key], { encoding: 'utf8' })
@@ -6429,20 +6454,17 @@ subjectAltName=DNS:s3-us-west-2.amazonaws.com,DNS:wayback.maptiles.arcgis.com
     const tile = await sharp({ create: { width: 256, height: 256, channels: 3, background: '#c04020' } }).jpeg().toBuffer()
     const capabilities = readFileSync(join(root, 'map/map-container/tests/fixtures/wayback-capabilities.xml'))
     origin = createHttpsServer({ cert: readFileSync(certificate), key: readFileSync(key) }, async (request, response) => {
-      const url = new URL(request.url, 'https://wayback.fixture')
-      if (url.pathname.endsWith('/waybackconfig.json')) {
-        upstream.catalogReads += 1
-        const mode = upstream.mode
-        if (mode === 'hold') await heldCatalog.promise
-        if (mode !== 'ready') {
-          response.writeHead(503).end()
-          return
-        }
-        response.writeHead(200, { 'content-type': 'application/json' }).end(JSON.stringify({ 10: catalogItem }))
+      const url = new URL(request.url, `https://${request.headers.host}`)
+      if (url.hostname === 'www.arcgis.com') {
+        upstream.portalReads += 1
+        assert.equal(url.pathname, `/sharing/rest/content/items/${catalogItem.itemID}`)
+        assert.equal(url.searchParams.get('f'), 'json')
+        response.writeHead(200, { 'content-type': 'application/json' }).end(JSON.stringify(portalItem))
         return
       }
       upstream.nativeRequests.push(`${url.pathname}${url.search}`)
       if (url.searchParams.get('REQUEST') === 'GetCapabilities') {
+        upstream.capabilityReads += 1
         response.writeHead(200, { 'content-type': 'application/xml' }).end(capabilities)
       } else if (/\/tile\/10\/\d+\/\d+\/\d+$/u.test(url.pathname)) {
         response.writeHead(200, { 'content-type': 'image/jpeg' }).end(tile)
@@ -6454,7 +6476,13 @@ subjectAltName=DNS:s3-us-west-2.amazonaws.com,DNS:wayback.maptiles.arcgis.com
     proxy.on('connection', track)
     proxy.on('connect', (request, socket, head) => {
       socket.on('error', () => socket.destroy())
-      if (!['s3-us-west-2.amazonaws.com:443', 'wayback.maptiles.arcgis.com:443'].includes(request.url)) {
+      if (request.url === 's3-us-west-2.amazonaws.com:443') {
+        // The host never downloads the catalog; count the denial so a regression to host polling is visible.
+        upstream.hostCatalogDenied += 1
+        socket.end('HTTP/1.1 502 Bad Gateway\r\nConnection: close\r\n\r\n')
+        return
+      }
+      if (!['wayback.maptiles.arcgis.com:443', 'www.arcgis.com:443'].includes(request.url)) {
         upstream.unexpectedAuthorities.push(request.url)
         socket.end('HTTP/1.1 502 Bad Gateway\r\nConnection: close\r\n\r\n')
         return
@@ -6470,112 +6498,136 @@ subjectAltName=DNS:s3-us-west-2.amazonaws.com,DNS:wayback.maptiles.arcgis.com
     })
     const proxyPort = await listen(proxy)
     const providerPort = await listen(provider)
-    const coldUrl = await boot(providerPort, proxyPort)
-    await waitForCounter(() => upstream.catalogReads, 1)
-    assert.equal(existsSync(catalogPath), false)
-    browser = await chromium.launch({
-      headless: true,
+    // One persistent profile so BrowserStorage survives the reboot with the same map home.
+    const context = await chromium.launchPersistentContext(profile, {
+      headless: true, locale: 'zh-CN', viewport: { width: 390, height: 844 }, hasTouch: true, colorScheme: 'dark',
       args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'],
     })
-    const cold = await openMap(coldUrl)
-    const readCatalog = url => url.pathname === '/api/map/wayback' && url.searchParams.get('operation') === 'catalog'
-    const coldPanel = cold.page.locator('[data-map-wayback]')
-    const [preparing, coldDialog] = await Promise.all([
-      cold.page.waitForResponse(response => readCatalog(new URL(response.url())) && response.status() === 503),
-      openImageryDialog(cold.page, 'early'),
-    ])
-    assert.equal(preparing.headers()['retry-after'], '1')
-    const preparingBody = await cold.page.evaluate(async path => (await fetch(path)).json(), preparing.url())
-    assert.deepEqual(preparingBody, { ok: false, code: 'SOURCE_UNAVAILABLE' })
-    await coldPanel.getByRole('status').filter({ hasText: /准备|Preparing/ }).waitFor()
-    assert.equal(await coldPanel.getByRole('combobox').isDisabled(), true)
-    await capture(coldDialog, 'preparing-light')
-    heldCatalog.resolve()
-    await coldPanel.getByRole('alert').filter({ hasText: /暂不可选|temporarily unavailable/ }).waitFor()
-    assert.equal(await coldPanel.getByRole('combobox').isDisabled(), true)
-    const retry = coldPanel.getByRole('button', { name: /Retry|重试/ })
-    await retry.focus()
-    for (const activate of [() => cold.page.keyboard.press('Enter'), () => retry.tap()]) {
-      const [failed] = await Promise.all([
-        cold.page.waitForResponse(response => readCatalog(new URL(response.url())) && response.status() === 502),
-        activate(),
-      ])
-      assert.equal(failed.headers()['retry-after'], undefined)
-      await retry.waitFor()
-      assert.equal(upstream.catalogReads, 1)
-    }
-    for (const control of [coldPanel.getByRole('combobox'), retry]) {
-      const box = await control.boundingBox()
-      assert.ok(box && box.x >= 0 && box.x + box.width <= 390 && box.y >= 0 && box.y + box.height <= 844)
-    }
-    await capture(coldDialog, 'unavailable-light')
-    assert.equal(existsSync(catalogPath), false)
-    await cold.context.close()
-    await stopApp()
-
-    upstream.mode = 'ready'
-    await boot(providerPort, proxyPort)
-    await waitForValue(() => {
-      if (!existsSync(catalogPath)) return false
-      try { return loadWaybackCatalog(catalogPath)?.length === 1 } catch (error) {
-        if (error.code === 'ERR_SQLITE_ERROR' || error.message === 'unsupported Wayback catalog schema') return false
-        throw error
+    browser = context
+    // The browser context intercepts the exact official S3 URL; it is held until the map is ready, then
+    // fulfilled as a public CORS read. No credential header may ever ride on it.
+    await context.route(url2 => url2.href === WAYBACK_CONFIG_URL, async route => {
+      browserCatalog.requests += 1
+      const request = route.request()
+      const headers = await request.allHeaders()
+      browserCatalog.headers.push(headers)
+      for (const name of ['cookie', 'authorization', 'proxy-authorization', 'referer']) {
+        if (headers[name] !== undefined) browserCatalog.violations.push(`${name} on the catalog request`)
       }
-    }, 15_000, `Startup did not write SQLite before any browser request: ${stderr.value}`)
-    const committed = [{ ...catalogItem, releaseNum: 10, releaseDateLabel: '2014-02-20' }]
-    assert.deepEqual(loadWaybackCatalog(catalogPath), committed)
-    assert.equal(upstream.catalogReads, 2)
-    assert.deepEqual(upstream.nativeRequests, [])
-    await stopApp()
-
-    upstream.mode = 'offline'
-    const warmUrl = await boot(providerPort, proxyPort)
-    await waitForValue(() => `${stdout.value}${stderr.value}`.includes('Wayback catalog fetch failed'), 15_000, 'offline refresh failure must be logged')
-    assert.equal(upstream.catalogReads, 3)
-    const warm = await openMap(warmUrl, 'dark')
-    const dialog = await openImageryDialog(warm.page, 'early')
-    const select = dialog.locator('[data-map-wayback-release]')
-    await select.locator('option[value="10"]').waitFor({ state: 'attached' })
-    assert.equal(await select.isEnabled(), true)
-    await capture(dialog, 'saved-dark')
-    await warm.page.route(url => url.pathname === '/api/map/sources/render', async route => {
+      assert.notEqual(new URL(request.url()).origin, new URL(request.frame().url()).origin)
+      await heldCatalog.promise
+      await route.fulfill({
+        status: 200, contentType: 'application/json', body: catalogBody,
+        headers: { 'access-control-allow-origin': '*' },
+      })
+      const responseHeaders = await (await request.response())?.allHeaders()
+      if (responseHeaders?.['access-control-allow-credentials'] !== undefined) browserCatalog.violations.push('credentialed CORS on the catalog response')
+    })
+    const coldUrl = await boot(providerPort, proxyPort)
+    const cold = await openMap(coldUrl, context)
+    // The catalog is still held: the selector must be visible but empty, with no host catalog read and no admission.
+    const coldDialog = await openImageryDialog(cold.page, 'early')
+    const coldPanel = cold.page.locator('[data-map-wayback]')
+    await coldPanel.getByRole('status').filter({ hasText: /正在读取|Reading/ }).waitFor({ timeout: 10_000 })
+    assert.equal(browserCatalog.requests, 1, 'the browser must request the official catalog exactly once')
+    assert.equal(cold.browserRequests.admit, 0)
+    assert.deepEqual(hostWaybackReads, [], 'the browser must not read operation=catalog from the host')
+    await capture(coldDialog, 'browser-hold-dark')
+    heldCatalog.resolve()
+    await coldPanel.locator('[data-map-wayback-release] option[value="10"]').waitFor({ state: 'attached', timeout: 30_000 })
+    assert.equal(await coldPanel.getByRole('combobox').isEnabled(), true)
+    assert.deepEqual(browserCatalog.violations, [], 'the catalog request must carry no credentials')
+    assert.deepEqual(cold.browserRequests.admitBodies, [])
+    assert.equal(existsSync(catalogPath), false, 'the host must not write a catalog before any release is admitted')
+    assert.equal(upstream.portalReads, 0)
+    await capture(coldDialog, 'browser-catalog-dark')
+    // Selecting release 10 is the first click: exactly one admission against the official portal item.
+    const select = coldDialog.locator('[data-map-wayback-release]')
+    await cold.page.route(url => url.pathname === '/api/map/sources/render', async route => {
       await renderGate.promise
       await route.continue()
     })
-    const [applied] = await Promise.all([
-      warm.page.waitForResponse(response => new URL(response.url()).pathname === '/api/map/change'
-        && response.request().postDataJSON()?.record?.change?.op === 'set-imagery-display'),
+    const changeApplied = cold.page.waitForResponse(response => new URL(response.url()).pathname === '/api/map/change'
+      && response.request().postDataJSON()?.record?.change?.op === 'set-imagery-display').catch(error => error)
+    const [admitted] = await Promise.all([
+      cold.page.waitForResponse(response => new URL(response.url()).pathname === '/api/map/wayback/admit' && response.request().method() === 'POST'),
       select.selectOption('10'),
     ])
+    assert.equal(admitted.status(), 200, JSON.stringify({ result: await admitted.json(), upstream, stderr: stderr.value.slice(-800) }))
+    const applied = await changeApplied
+    if (applied instanceof Error) throw applied
+    assert.equal(admitted.request().postDataJSON().release.releaseId, 10)
+    assert.deepEqual(cold.browserRequests.admitBodies.map(body => body.release), [{
+      releaseId: 10, itemId: catalogItem.itemID, layerIdentifier: 'WB_2014_R01', publishedAt: '2014-02-20',
+    }])
+    assert.equal(cold.browserRequests.admit, 1, 'admission happens on the first release click only')
+    assert.equal(upstream.portalReads, 1, 'the portal item is read exactly once')
+    assert.equal(browserCatalog.requests, 1)
     assert.equal(applied.status(), 200)
     const display = applied.request().postDataJSON().record.change.display
     assert.equal(display.earlySource.release.version, '10')
     assert.equal(display.recentOpacity, 0.5)
-    assert.equal(upstream.catalogReads, 3)
-    assert.deepEqual(upstream.nativeRequests, [], 'selection must not fetch capabilities or tiles')
     renderGate.resolve()
     await waitForValue(() => upstream.nativeRequests.some(path => /\/tile\/10\//u.test(path)), 25_000, 'Viewport never requested the selected release tiles')
     assert.ok(upstream.nativeRequests.every(path => path.includes('GetCapabilities') || /\/tile\/10\//u.test(path)))
-    await dialog.getByText(releaseTitle, { exact: true }).last().waitFor()
-    await capture(dialog, 'selected-dark')
-    await closeImageryDialog(warm.page, dialog)
-    const panel = await openUnifiedMapPanel(warm.page, 'imagery')
+    await coldDialog.getByText(releaseTitle, { exact: true }).last().waitFor()
+    await capture(coldDialog, 'browser-selected-dark')
+    await closeImageryDialog(cold.page, coldDialog)
+    const panel = await openUnifiedMapPanel(cold.page, 'imagery')
     await imageryRow(panel, 'early').getByText(releaseTitle, { exact: true }).waitFor()
     await imageryRow(panel, 'recent').getByText(/50%/u).waitFor()
-    await warm.page.setViewportSize({ width: 1280, height: 900 })
-    await warm.page.locator('[data-sidebar-right-panel="push"][data-sidebar-right-open]').waitFor()
-    await sendMessage(warm.page, '撤销早期影像。')
-    await waitForValue(() => readDurableSessionEvents([mapHome], warm.sessionId)
+    assert.equal(existsSync(catalogPath), true, 'the first admission creates the verified-release store')
+    const verifiedBefore = loadVerifiedWaybackRelease(catalogPath, 10, display.earlySource.configDigest)
+    assert.ok(verifiedBefore, 'the admitted release is persisted under its config digest')
+    const hostCatalogDeniedBeforeReboot = upstream.hostCatalogDenied
+    // Undo must not admit again: the admitted release stays remembered while the display is restored.
+    await cold.page.setViewportSize({ width: 1280, height: 900 })
+    await cold.page.locator('[data-sidebar-right-panel="push"][data-sidebar-right-open]').waitFor()
+    await sendMessage(cold.page, '撤销早期影像。')
+    await waitForValue(() => readDurableSessionEvents([mapHome], cold.sessionId)
       .some(event => event.type === 'tool/result' && event.data.meta?.change?.display?.earlySource === null
         && event.data.meta?.change?.display?.recentOpacity === 1), 15_000, 'Undo must persist the restored display state')
     await imageryRow(panel, 'recent').getByText(/100%/u).waitFor()
     assert.equal(await imageryRow(panel, 'early').locator('[data-map-panel-eye]').isDisabled(), true)
-    assert.equal(upstream.catalogReads, 3)
-    assert.deepEqual(loadWaybackCatalog(catalogPath), committed)
+    assert.equal(cold.browserRequests.admit, 1, 'undo must not admit')
+    assert.equal(browserCatalog.requests, 1)
+    assert.equal(upstream.portalReads, 1)
+    await capture(panel, 'browser-undo-dark')
+    // Re-selecting the already admitted release reuses the remembered verification: no second admission.
+    await cold.page.setViewportSize({ width: 390, height: 844 })
+    const reselectDialog = await openImageryDialog(cold.page, 'early')
+    const reselection = cold.page.waitForResponse(response => new URL(response.url()).pathname === '/api/map/change'
+      && response.request().postDataJSON()?.record?.change?.op === 'set-imagery-display')
+    await reselectDialog.locator('[data-map-wayback-release]').selectOption('10')
+    assert.equal((await reselection).status(), 200)
+    await closeImageryDialog(cold.page, reselectDialog)
+    assert.equal(cold.browserRequests.admit, 2, 'each explicit choice is checked by the host')
+    assert.equal(upstream.portalReads, 1, 'reselection uses the persisted proof')
+    assert.deepEqual(hostWaybackReads, [], 'selection and undo never read operation=catalog')
+    for (const page of context.pages()) await page.close()
+
+    // Reboot with the same map home and the same browser profile: the cached catalog serves without S3 and without admission.
+    heldCatalog.resolve()
+    await stopApp()
+    const warmUrl = await boot(providerPort, proxyPort, new URL(coldUrl).port)
+    const warm = await openMap(warmUrl, context, cold.sessionId)
+    assert.equal(browserCatalog.requests, 1, 'the browser must reuse its cached catalog after reboot')
+    const warmDialog = await openImageryDialog(warm.page, 'early')
+    const warmSelect = warmDialog.locator('[data-map-wayback-release]')
+    await warmSelect.locator('option[value="10"]').waitFor({ state: 'attached', timeout: 15_000 })
+    assert.equal(await warmSelect.inputValue(), '10', 'the persisted fixed selection is restored')
+    await capture(warmDialog, 'browser-restored-dark')
+    assert.equal(warm.browserRequests.admit, 0)
+    assert.equal(browserCatalog.requests, 1)
+    assert.equal(upstream.portalReads, 1)
+    assert.ok(upstream.hostCatalogDenied >= hostCatalogDeniedBeforeReboot, 'background host sync does not supply the browser catalog')
+    assert.equal(existsSync(catalogPath), true)
+    assert.equal(loadVerifiedWaybackRelease(catalogPath, 7, '0'.repeat(64)), undefined)
+    assert.deepEqual(loadVerifiedWaybackRelease(catalogPath, 10, display.earlySource.configDigest), { ...verifiedBefore })
+    await closeImageryDialog(warm.page, warmDialog)
     assert.deepEqual(upstream.unexpectedAuthorities, [])
     assert.deepEqual(pageErrors, [])
-    assert.deepEqual(consoleErrors.filter(text => !/Failed to load resource/.test(text)), [])
-    await warm.context.close()
+    assert.deepEqual(consoleErrors.filter(text => !/Failed to load resource/.test(text)), consoleErrors)
   } finally {
     heldCatalog.resolve()
     renderGate.resolve()

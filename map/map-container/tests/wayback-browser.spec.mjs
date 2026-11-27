@@ -2,14 +2,23 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import { createServer as createHttpServer } from 'node:http'
 import { createRequire } from 'node:module'
+import { mkdtemp, rm } from 'node:fs/promises'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 import { chromium } from '../../../apps/web/node_modules/playwright/index.mjs'
 import { freeHmrPort } from './free-hmr-port.mjs'
 
 const webRequire = createRequire(new URL('../../../apps/web/package.json', import.meta.url))
 
-test('imagery tabs and direct Wayback selection remain reachable at 390px', { timeout: 120_000 }, async t => {
+test('imagery tabs and admitted Wayback selection remain reachable at 390px', { timeout: 120_000 }, async t => {
+  const cacheDir = await mkdtemp(join(tmpdir(), 'wayback-vite-'))
   const hmrPort = await freeHmrPort()
-  const vite = await webRequire('vite').createServer({
+  let vite
+  t.after(async () => {
+    try { await vite?.close() } finally { await rm(cacheDir, { recursive: true, force: true }) }
+  })
+  vite = await webRequire('vite').createServer({
+    cacheDir,
     configFile: false,
     root: new URL('../../..', import.meta.url).pathname,
     appType: 'custom',
@@ -21,7 +30,6 @@ test('imagery tabs and direct Wayback selection remain reachable at 390px', { ti
     ] },
     server: { middlewareMode: true, hmr: { port: hmrPort } },
   })
-  t.after(() => vite.close())
   const server = createHttpServer((request, response) => {
     if (request.url === '/') {
       response.writeHead(200, { 'content-type': 'text/html; charset=utf-8' })
@@ -79,14 +87,28 @@ test('imagery tabs and direct Wayback selection remain reachable at 390px', { ti
   const earlyRow = page.locator('[data-map-imagery-row][data-imagery-kind="early"]')
   await earlyRow.locator('button[aria-haspopup="dialog"]').click()
   const releaseSelect = page.locator('[data-map-wayback-release]')
-  await releaseSelect.waitFor()
+  await page.waitForFunction(() => document.querySelectorAll('[data-map-wayback-release] option').length === 3)
+  assert.deepEqual(await releaseSelect.evaluateAll(nodes => nodes.map(node => node.disabled)), [false])
   await releaseSelect.selectOption('10')
   await page.waitForFunction(() => window.waybackFixture.changes.some(change => change.op === 'set-imagery-display'))
+  assert.deepEqual(await page.evaluate(() => window.waybackFixture.admits), [{
+    method: 'POST', credentials: 'same-origin',
+    body: { sessionId: 'fixture', release: { releaseId: 10, itemId: 'a'.repeat(32), publishedAt: '2014-02-20', layerIdentifier: 'WB_2014_R01' } },
+  }])
+  assert.deepEqual(await page.evaluate(() => window.waybackFixture.submitted), [{ revision: 0 }])
   assert.equal(await page.evaluate(() => window.waybackFixture.changes.at(-1).display.recentOpacity), 0.5)
+  assert.equal(await releaseSelect.inputValue(), '10')
   await assertVisibleControls()
-  const requests = await page.evaluate(() => window.waybackFixture.requests)
-  assert.ok(requests.length > 0)
-  assert.ok(requests.every(operation => operation === 'catalog'), requests.join(','))
+  // Only the admission route is read; the local catalog is never polled.
+  assert.deepEqual(await page.evaluate(() => window.waybackFixture.requests), ['/api/map/wayback/admit'])
+
+  // A refused admission is reported inside the dialog and keeps the selection.
+  await page.evaluate(() => window.waybackFixture.setAdmissionFailure(true))
+  await releaseSelect.selectOption('50')
+  await page.locator('[data-map-wayback-failure]').waitFor()
+  assert.equal(await page.evaluate(() => window.waybackFixture.submitted.length), 1)
+  assert.equal(await releaseSelect.inputValue(), '10')
+  await page.evaluate(() => window.waybackFixture.setAdmissionFailure(false))
   assert.equal(await earlyRow.locator('[data-map-panel-eye]').getAttribute('aria-pressed'), 'true')
   await page.evaluate(() => {
     const dialog = document.querySelector('[data-map-imagery-dialog]')?.closest('[role="dialog"]')
@@ -106,12 +128,14 @@ test('imagery tabs and direct Wayback selection remain reachable at 390px', { ti
     if (close instanceof HTMLElement) close.click()
   })
 
-  await page.evaluate(() => window.waybackFixture.setCatalogFailure(true))
+  // A failed refresh keeps the last verified list, the selection, and raises no error.
   await page.locator('[data-map-imagery-row][data-imagery-kind="early"] button[aria-haspopup="dialog"]').click()
-  await page.getByRole('alert').waitFor()
-  await page.evaluate(() => window.waybackFixture.setCatalogFailure(false))
-  await page.getByRole('button', { name: 'Retry' }).click()
-  await page.getByRole('alert').waitFor({ state: 'hidden' })
+  await page.locator('[data-map-wayback-release]').waitFor()
+  await page.evaluate(() => window.waybackFixture.setCatalogFailure(true))
+  await page.evaluate(() => window.waybackFixture.refresh())
+  await page.waitForFunction(() => window.waybackFixture.snapshot().reason === 'http')
   assert.equal(await page.locator('[data-map-wayback-release]').inputValue(), '10')
+  assert.equal(await page.locator('[data-map-wayback-release] option').count(), 3)
+  assert.equal(await page.locator('[data-map-wayback] [role="alert"]').count(), 0)
   assert.deepEqual(errors, [])
 })
