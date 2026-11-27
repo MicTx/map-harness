@@ -4,4 +4,4 @@
 #   pnpm run verify-translation-pairing --write CONTRIBUTING.md
 /contributing:
   en: 753d79cb51fdf122
-  zh: e83f65a78ad650a6
+  zh: c54fbdb296f62876

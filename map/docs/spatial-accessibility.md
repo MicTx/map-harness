@@ -1,6 +1,6 @@
 # 空间可达性层（spatial-accessibility）
 
-P1 可达性层把「步行 15 分钟能到什么」从几何邻近里分出来：版本化方法输入、网络源（受控路网 provider 为缺省与测试基座；高德、天地图、Mapbox、百度、腾讯五家 adapter 经 Config 选择、用户填 key 启用）、持久 run 作业、人口加权覆盖与给定候选比较。模型只经 `run_submit`/`run_get`/`run_cancel` 三个普通 MCP 工具消费它；设计依据见空间决策架构 §6.4（长任务）与 §12（科学约束）。
+可达性层把「步行 15 分钟能到什么」从几何邻近里分出来：版本化方法输入（`p1-network-coverage@1`）、网络源（受控路网 provider 为缺省与测试基座；高德、天地图 REST、天地图浏览器 SDK、Mapbox、百度、腾讯六家 adapter 经 Config 选择、用户填 key 启用）、持久 run 作业、人口加权覆盖与给定候选比较。模型只经 `run_submit`/`run_get`/`run_cancel` 三个工具消费它（名单见[能力索引](capability-index.md)）。
 
 ## 方法契约（`contract.ts`）
 
@@ -30,7 +30,7 @@ HTTP 401/403 →`PERMISSION_DENIED`（包括已观测的403/301012权限类型�
 
 ## 天地图浏览器SDK adapter（`tianditu-sdk.ts`）
 
-`TIANDITU_SDK_NETWORK_ID`（`tianditu-sdk-road-network`）是第七个网络源：给**浏览器端类型**的天地图 Key 用的驾车通道。这类 Key 被厂商 REST `/drive` 以 301012（权限类型错误）拒绝，但在其授权形态——真实浏览器页面内运行的厂商 JS SDK——下驾车授权成立（2026-10-12 本机实测：`T.DrivingRoute` 返回 1 方案）。adapter 的形态因此是：内建 `node:http` 在 `127.0.0.1` 随机端口伺服一张页面，Key 经模板注入响应体（不出现在 URL、日志或错误文本），可选 peer 依赖 `playwright` 驱动无头 Chromium 打开该页，页内 `T.DrivingRoute` 完成真实驾车规划；分钟=方案时长秒/60、公里=方案距离、节点=量化折线（折线不可提取时降为端点两点并在能力声明中写明）。Playwright 缺席时构造响亮失败并给安装指引，绝不退化成 Node 直发 JSONP 的 SDK 仿冒（那等于伪造来源白名单）。
+`TIANDITU_SDK_NETWORK_ID`（`tianditu-sdk-road-network`）是第七个、经 Config 显式选择的网络源：给**浏览器端类型**的天地图 Key 用的驾车通道。这类 Key 被厂商 REST `/drive` 以 301012（权限类型错误）拒绝，但在其授权形态——真实浏览器页面内运行的厂商 JS SDK——下驾车授权成立（2026-10-12 本机实测：`T.DrivingRoute` 返回 1 方案）。adapter 的形态因此是：内建 `node:http` 在 `127.0.0.1` 随机端口伺服一张页面，Key 经模板注入响应体（不出现在 URL、日志或错误文本），可选 peer 依赖 `playwright` 驱动无头 Chromium 打开该页，页内 `T.DrivingRoute` 完成真实驾车规划；分钟=方案时长秒/60、公里=方案距离、节点=量化折线（折线不可提取时降为端点两点并在能力声明中写明）。Playwright 缺席时构造响亮失败并给安装指引，绝不退化成 Node 直发 JSONP 的 SDK 仿冒（那等于伪造来源白名单）。
 
 该通道只定价 `drive`（`walk` 映射未验证，`METHOD_NOT_APPLICABLE`）；`serviceArea`/`readPois` 收缩面同 REST 通道。两类实测风险进了行为语义：①厂商加载器存在 **IP 频控 stub 降级**——同 IP 短时多次加载 `api?v=4.0` 后返回不含服务类的残缺构建、持续约几十分钟——页内检测到 stub 即归 `TEMPORARILY_UNAVAILABLE` 并附「分钟级重试」指引，不当代码缺陷；②结果形状防御性提取（时长/距离缺失或非有限值即响亮失败），不推导数值。取消语义：调用方 signal 触发即关闭当次页面（厂商请求随页面终止），下一次调用重开页面；桥与页面服务器按 Key 记忆复用，`closeDefaultSdkSessions()` 释放。凭据卫生与 REST 通道同纪律：Key 只进页面体与内存闭包，不进 `networkRef`、错误文本、日志或配置序列化。
 
@@ -58,9 +58,9 @@ Place v2的reported total可能封顶为150；采集达到150时保守返回part
 
 浏览器SDK Key不自动具备路线Web服务权限；应用禁用、Key类型不匹配和缺少高级接口授权都需要部署方处理，不能靠重试或改坐标绕过。`snapshots/session/map-lbs-denied`记录真实百度240拒绝，经run_submit/run_get形成failed/PERMISSION_DENIED；keyless回放仅替换外部HTTP响应，作业、诊断和模型可见结果仍由实际实现产生。终态没有coverage evidence时明确告知终态，不提示继续等待；取消与其他供应商状态仍由定向测试验证。
 
-## 五家坐标系差异
+## 五家厂商坐标系差异
 
-内部契约是 WGS84。各提供者的坐标处理由对应fixture验证；授权通过与坐标正确性分别验证：
+内部契约是 WGS84；五家厂商的坐标处理由对应 adapter fixture 验证（天地图 REST 与浏览器 SDK 两通道共用同一厂商坐标系），授权通过与坐标正确性分别验证：
 
 | 厂商 | 厂商坐标系 | adapter 行为 | 测试钉住的事实 |
 |---|---|---|---|
@@ -72,11 +72,11 @@ Place v2的reported total可能封顶为150；采集达到150时保守返回part
 
 ## 凭据与配置面（`plugin.ts`）
 
-Config 的 `provider` 缺省 `controlled-lattice`（无 schemastery 默认——既有部署的组合 dump 不变），已配置源恰七项：`controlled-lattice`、`amap-road-network`、`tianditu-road-network`、`tianditu-sdk-road-network`、`mapbox-road-network`、`baidu-road-network`、`tencent-road-network`。五个厂商块都是 credential-ref 角色、只携带 env 名：`amap.apiKeyEnv` 缺省 `AMAP_API_KEY`、`tianditu.apiKeyEnv` 缺省 `TIANDITU_API_KEY`、`mapbox.accessTokenEnv` 缺省 `MAPBOX_ACCESS_TOKEN`、`baidu.apiKeyEnv` 缺省 `BAIDU_API_KEY`、`tencent.apiKeyEnv` 缺省 `TENCENT_MAP_KEY`、`tiandituSdk.apiKeyEnv` 缺省 `TIANDITU_SDK_KEY`（浏览器端 Key，JS SDK 通道）；`timeoutMs` 单请求超时 1000–60000ms（SDK 通道为整次驾车墙钟 1000–120000ms），百度/腾讯 `spacingDeg` 为采样间距（有界）。五块另有可选 `baseUrl`（TLS 或内网镜像根）：须为非空 `http://` 或 `https://` 前缀、无尾斜杠、无路径/查询串/片段、无 userinfo；缺省不写入配置，请求仍走厂商根常量，组合 dump 不变。选择由 `resolveNetworkSource` 在提交期定案：未知 id 即错并列出七个已配置源；选任一厂商而当前凭据解析为空即拒绝提交——指名 env 名、声明拒绝静默回退受控 provider；非法 `baseUrl` 在加载期拒绝，失败文本不回显 URL 里的凭据片段。凭据值只经 env 引用进入、只在单次提交闭包持有：不进配置默认值与序列化、不进日志与错误文本（失败文本只携带 env 名与厂商错误码/形态）、不进 `networkRef`/证据、不经 `baseUrl` 携带。接入方式：用户 overlay 加任一厂商 `provider`，部署环境在根 `.env` 设对应变量（不入提交）；需要 TLS 或镜像根时在同一厂商块加 `baseUrl: https://mirror.example`。map-web 档案用 `tianditu-road-network`：无 Key 仍挂载服务，LBS 设置页保存后下一次 `run_submit` 生效；未配置时提交返回 credential-not-configured，加载期响亮失败仍保留给显式组合错误。
+Config 的 `provider` 缺省 `controlled-lattice`（无 schemastery 默认——既有部署的组合 dump 不变），已配置源恰七项：`controlled-lattice`、`amap-road-network`、`tianditu-road-network`、`tianditu-sdk-road-network`、`mapbox-road-network`、`baidu-road-network`、`tencent-road-network`。各厂商配置块都是 credential-ref 角色、只携带 env 名（五家厂商，天地图 REST 与浏览器 SDK 各占一个块，共六块）：`amap.apiKeyEnv` 缺省 `AMAP_API_KEY`、`tianditu.apiKeyEnv` 缺省 `TIANDITU_API_KEY`、`mapbox.accessTokenEnv` 缺省 `MAPBOX_ACCESS_TOKEN`、`baidu.apiKeyEnv` 缺省 `BAIDU_API_KEY`、`tencent.apiKeyEnv` 缺省 `TENCENT_MAP_KEY`、`tiandituSdk.apiKeyEnv` 缺省 `TIANDITU_SDK_KEY`（浏览器端 Key，JS SDK 通道）；`timeoutMs` 单请求超时 1000–60000ms（SDK 通道为整次驾车墙钟 1000–120000ms），百度/腾讯 `spacingDeg` 为采样间距（有界）。除浏览器 SDK 块外，其余五块另有可选 `baseUrl`（TLS 或内网镜像根）：须为非空 `http://` 或 `https://` 前缀、无尾斜杠、无路径/查询串/片段、无 userinfo；缺省不写入配置，请求仍走厂商根常量，组合 dump 不变。选择由 `resolveNetworkSource` 在提交期定案：未知 id 即错并列出七个已配置源；选任一厂商而当前凭据解析为空即拒绝提交——指名 env 名、声明拒绝静默回退受控 provider；非法 `baseUrl` 在加载期拒绝，失败文本不回显 URL 里的凭据片段。凭据值只经 env 引用进入、只在单次提交闭包持有：不进配置默认值与序列化、不进日志与错误文本（失败文本只携带 env 名与厂商错误码/形态）、不进 `networkRef`/证据、不经 `baseUrl` 携带。接入方式：用户 overlay 加任一厂商 `provider`，部署环境在根 `.env` 设对应变量（不入提交）；需要 TLS 或镜像根时在同一厂商块加 `baseUrl: https://mirror.example`。map-web 档案用 `tianditu-road-network`：无 Key 仍挂载服务，LBS 设置页保存后下一次 `run_submit` 生效；未配置时提交返回 credential-not-configured，加载期响亮失败仍保留给显式组合错误。
 
 ## 真实厂商契约门禁（key-activated lane）
 
-`spatial-accessibility/tests/vendor-contract.spec.mjs` 固化台账重试条款的四类断言——跨界、分页缺失、取消、无效 key——外加真实定价面。断言集本体在 `provider-contract.shared.mjs`，供应商无关：同一断言集对受控 provider 恒绿（受控双跑等价）；无对应凭据时该厂商侧自跳过、套件 exit 0。天地图与 Mapbox 没有 POI 目录，分页类断言在真实 lane 上是声明式收缩（`readPois` 响亮 `METHOD_NOT_APPLICABLE`，绝不伪造一页）；天地图没有等时面，定价类断言只覆盖 route。五家 adapter 的 fixture suite 以各厂商 wire 格式覆盖 keyless 契约与映射/收缩面。用户填 key 后按需设置对应 env 复验真实 API：
+`spatial-accessibility/tests/vendor-contract.spec.mjs` 固化台账重试条款的四类断言——跨界、分页缺失、取消、无效 key——外加真实定价面。断言集本体在 `provider-contract.shared.mjs`，供应商无关：同一断言集对受控 provider 恒绿（受控双跑等价）；无对应凭据时该厂商侧自跳过、套件 exit 0。天地图与 Mapbox 没有 POI 目录，分页类断言在真实 lane 上是声明式收缩（`readPois` 响亮 `METHOD_NOT_APPLICABLE`，绝不伪造一页）；天地图没有等时面，定价类断言只覆盖 route。五家厂商的 adapter fixture suite 以各厂商 wire 格式覆盖 keyless 契约与映射/收缩面（天地图 REST 与浏览器 SDK 各一套，共六套）。用户填 key 后按需设置对应 env 复验真实 API：
 
 ```sh
 TIANDITU_API_KEY=<用户key> node --test --experimental-strip-types map/spatial-accessibility/tests/vendor-contract.spec.mjs

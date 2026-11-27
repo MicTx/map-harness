@@ -1,196 +1,63 @@
-# Spatial Context Loop (P0c)
+# 空间上下文循环
 
-`@map-harness/spatial-context` owns the P0c context loop: the DecisionFrame
-domain, the authoritative `decisionFrame` session projection, the bounded
-pre-step snapshot injection, the versioned method cards, and the task budget
-ledger. Scope and acceptance live in the task package
-`.spec/specs/2026-09-24_add-spatial-context-loop/`; the target design is
-`.spec/docs/2026-09-23_docs-spatial-agent-architecture_design.md` (§3.3, §5,
-§5.5) — that document is a design, not an implementation record.
+`@map-harness/spatial-context` 拥有空间上下文循环：DecisionFrame 领域、权威 `decisionFrame` session 投影、有界 pre-step 快照注入、版本化方法卡与任务预算账本。
 
-## Faces and composition
+## 面与组合
 
-| Face | Entry | Mounted by | Registers |
+| 面 | 入口 | 挂载方 | 注册 |
 |---|---|---|---|
-| Host | `@map-harness/spatial-context` | map-web patch insert row `spatial-context` | the `decisionFrame` projection and the `spatialContext` service (resolved task budget + frame read) |
-| Agent listener | `@map-harness/spatial-context/agent` | map-web host fallback `spatial-context-agent-fallback`; optional preset row `spatial-context-agent` | the `agent/pre-step` listener |
+| Host | `@map-harness/spatial-context` | map-web patch insert 行 `spatial-context` | `decisionFrame` 投影与 `spatialContext` 服务（解析后的任务预算 + 帧读取） |
+| Agent 监听器 | `@map-harness/spatial-context/agent` | map-web host fallback `spatial-context-agent-fallback`；可选 preset 行 `spatial-context-agent` | `agent/pre-step` 监听器 |
 
-The host projection is required for the frame to fold. The map-web fallback supplies context to presets that do not mount the listener, including installed user presets; it never rewrites their files. When a preset also mounts the listener, its inner waterfall decision owns admission and its configured budget: the outer listener neither duplicates a snapshot nor bypasses a context-byte refusal. The request-local admission marker survives decision spreads but is not serialized into Session events.
+host 投影是帧折叠的前提。map-web fallback 为未挂载监听器的 preset（含已安装的用户 preset）提供上下文，从不改写它们的文件。preset 同时挂载监听器时，其内层 waterfall 决定负责准入与自己的预算：外层监听器既不重复快照，也不绕过上下文字节拒绝。请求内的准入标记经 decision spread 保留，但不写入 Session 事件。
 
-## Domain and authority separation
+## 领域与权限分离
 
-- **GoalContract** — advanced exactly by accepted real `user/message` events
-  (`source.kind === 'user'`). Plugin user-role context, model output, and tool
-  results never authorize a goal, whatever seqs they cite. Each accepted real
-  user message raises `goalRevision` and re-derives `questionId` from its
-  source seq. Trusted-UI structured fields have no upstream extension point
-  without a new event type, which P0c forbids; the seam is recorded, not
-  faked.
-- **PlanState** — written only by accepted `decision_update` results whose
-  `decision-change` meta cites the current `goalRevision` and
-  `expectedPlanRevision`. Model interpretation stays tentative; the
-  `decision_update` handler and the projection fold run the same conflict
-  checks (`goal-revision-stale`, `plan-revision-conflict`,
-  `unknown-evidence-ref`), so an old run can never overwrite a new goal.
-- **EvidenceLedger** — folded only from settled spatial tool results:
-  `analysis-result`/`catalog-result`/`map-save-receipt` records become
-  bounded entries with `succeeded` status; failed results fold as
-  `failed-tool` entries with no applicable record. A model cannot mark
-  evidence complete by assertion. Each entry keeps the headline values its
-  record reported (at most `MAX_EVIDENCE_METRICS`, names and string values
-  clipped to `MAX_EVIDENCE_TEXT_CHARS`), the record's claim level when it
-  has one, and the goal revision current at settlement, so a later step or
-  a rebuilt baseline can cite the result itself. The snapshot renders them
-  as `name=value unit` and `claim=<level>`, and labels evidence settled
-  under an earlier goal. The ledger records no map revision, because the
-  records do not carry one.
-- **mapRevision** — the authoritative map expression revision is the
-  `mapContainer` projection's revision counter; the snapshot renders it as a
-  read-only fact. Style/view changes do not invalidate numeric evidence;
-  goal, input, or method changes re-open applicability via the plan.
-- **Wider analysis families** — the ledger folds every unified spatial tool's
-  real `tool/result.meta` protocol: `spatial-stat`, `spatial-decision`,
-  `viz-style`, `accessibility-run`, `spatial-terrain`, and `spatial-scale`
-  records decode through bounded consumer-side readers pinned to the exact
-  producer schema version/kind; the entry keeps the record's own status and
-  refs. A non-terminal accessibility run stays `unknown` with an explicit
-  未终态 limitation — never success, and an `indeterminate` line of sight
-  or slope folds as `unknown` too. A `terrain_slope` record keeps the mean
-  and maximum slope and the missing-cell count. Map mutations stay budget-only (the
-  map projection owns them). The folded name list stays pinned to
-  `SPATIAL_MCP_TOOL_NAMES` by a parity test; the `analysis-result` reader's
-  tool list stays pinned to the map-tools geo roster, and the parity test
-  decodes a producer-built record for every listed tool.
+- **GoalContract** — 只由被接受的 real `user/message` 事件推进（`source.kind === 'user'`）。插件 user-role context、模型输出与工具结果永远不能授权目标，无论引用哪个 seq。每个被接受的 real user message 提升 `goalRevision`，并由其 source seq 重新派生 `questionId`。可信 UI 的结构化字段没有上游扩展点，除非新增事件类型；本循环不新增事件类型，该 seam 被记录，不伪造。
+- **PlanState** — 只由被接受的 `decision_update` 结果写入，其 `decision-change` meta 引用当前 `goalRevision` 与 `expectedPlanRevision`。模型解释保持暂定；`decision_update` handler 与投影 fold 执行同一组冲突检查（`goal-revision-stale`、`plan-revision-conflict`、`unknown-evidence-ref`），因此旧运行永远不能覆盖新目标。
+- **EvidenceLedger** — 只从已结算的空间工具结果折叠：`analysis-result`/`catalog-result`/`map-save-receipt` 记录成为带 `succeeded` 状态的有界条目；失败结果折叠为无适用记录的 `failed-tool` 条目。模型不能以断言把证据标为完成。每条保留记录上报的 headline 值（至多 `MAX_EVIDENCE_METRICS` 条，名称与字符串值截断到 `MAX_EVIDENCE_TEXT_CHARS`）、记录自身的 claim 级别（若有）以及结算时的 goal revision，使后续步骤或重建基线可以引用结果本身。快照把它们渲染为 `name=value unit` 与 `claim=<level>`，并标注在更早目标下结算的证据。账本不记录 map revision，因为记录本身不携带。
+- **mapRevision** — 权威地图表达 revision 是 `mapContainer` 投影的 revision 计数器；快照将其渲染为只读事实。样式/视图变化不使数值证据失效；目标、输入或方法变化经 plan 重新打开适用性。
+- **更广的分析家族** — 账本折叠每个统一空间工具真实的 `tool/result.meta` 协议：`spatial-stat`、`spatial-decision`、`viz-style`、`accessibility-run`、`spatial-terrain` 与 `spatial-scale` 记录经有界消费者侧 reader 解码，并钉住生产者精确的 schema 版本/kind；条目保留记录自身的 status 与 refs。非终态的可达性 run 保持 `unknown` 并附显式未终态 limitation——绝不算成功；`indeterminate` 的视线或坡度同样折叠为 `unknown`。`terrain_slope` 记录保留平均与最大坡度及缺测格数。地图 mutation 只计预算（地图投影拥有它们）。折叠名册由 parity 测试钉住 `SPATIAL_MCP_TOOL_NAMES`；`analysis-result` reader 的工具名单钉住 map-tools geo 名册，parity 测试为每个列出的工具解码一条生产者构造的记录。
 
-The `decisionFrame` state generation is `DECISION_FRAME_STATE_VERSION`
-(2). A projection cache row from another generation is discarded and the
-frame re-folds from the Session log, in either direction.
-- **Map facts** — the snapshot's map block composes from the current
-  projection: per-layer visibility (`显示/隐藏`, clipped at 8 with an explicit
-  note), the viewport (center/zoom/wkid), and the study AOI (name + bounding
-  ring) render as three distinct lines — the viewport is never conflated
-  with the AOI, and an unset AOI is stated. Unsettled spatial calls surface
-  as a pending count. An undone layer is simply gone: composition reads the
-  post-undo authoritative state. When the map container's `mapViewport`
-  registry holds a camera the browser settled on, a `用户视窗` line (center,
-  zoom, visible extent, wkid, 2D/3D) follows the projection viewport, and a
-  `地图环境` line states the mode plus the authoritative base and compatible
-  label titles (`Fixture Basemap + Fixture Labels` in the composition fixture;
-  an explicit label may be absent). An increment repeats the
-  `用户视窗` line only after the user moved the camera.
+`decisionFrame` 状态代次是 `DECISION_FRAME_STATE_VERSION`（2）。来自其他代次的投影缓存行被丢弃，帧从 Session 日志重新折叠，两个方向都如此。
 
-The commit protocol follows P0a: a mutation tool validates its candidate
-before returning; only a successful, paired, first-settled result folds;
-version-unknown, unpaired, duplicated, and stale records leave prior state
-untouched and record a bounded read-only diagnostic. Unknown
-`decision-change` versions are read-only refusals — the related domain write
-is blocked, never defaulted.
+- **地图事实** — 快照的地图块由当前投影组合：逐层可见性（`显示/隐藏`，超过 8 条截断并显式说明）、视窗（center/zoom/wkid）与研究 AOI（name + bounding ring）渲染为三条不同行——视窗绝不与 AOI 混同，未设置 AOI 会被明说。未结算的空间调用以 pending 计数出现。撤销的图层就是消失：组合读取撤销后的权威状态。当地图容器的 `mapViewport` 注册表持有浏览器落定的相机时，投影视窗之后跟一行 `用户视窗`（center、zoom、visible extent、wkid、2D/3D），一行 `地图环境` 说明 mode 与权威底图及兼容注记标题（组合 fixture 为 `Fixture Basemap + Fixture Labels`；显式注记可以缺失）。增量只在用户移动相机后重复 `用户视窗` 行。
 
-## Injection algorithm
+提交协议与地图容器一致：mutation 工具先校验候选再返回；只有成功、配对、首次结算的结果才折叠；版本未知、未配对、重复与过期记录保持先前状态不变，并记录有界只读诊断。未知 `decision-change` 版本是只读拒绝——相关领域写入被阻止，绝不取默认值。
 
-The pre-step listener, in order:
+## 注入算法
 
-1. Calls `next()` first. A `reject` decision or an empty first step returns
-   unchanged — a spatial snapshot never starts a request by itself.
-2. Reads the accepted frame state (host projection) and folds the claimed
-   batch's real user messages as **provisional goal candidates** — the
-   claimed messages have not entered the log, so the persistent contract is
-   not touched; `provisionalFrameOf` exists for composition only.
-3. Composes a **baseline** (full bounded frame: goal, plan, map snapshot,
-   resource candidates, evidence, selected method cards, tool-availability guidance,
-   stop advisory, budget) whenever no baseline for the current goal is
-   visible on the model surface — first entry, resume, fork, or after
-   compaction/surface replacement hid it. Otherwise composes an
-   **increment** listing the facts that settled after the newest visible
-   snapshot plus every tracked line whose current text differs from its
-   newest visible copy: the layer list, the visual and visual-change
-   candidates, the AOI, the user viewport, and the stop advisory. It
-   composes nothing when nothing changed. The elapsed counter in the budget
-   line never triggers an increment, and the budget advisory names the
-   exhausted counter without its live amount, so an exhausted budget is
-   delivered once.
-4. Deduplicates by content digest: an identical visible snapshot suppresses
-   re-injection. Digests are counted from the surface, so process caches and
-   compacted summaries never stand in for visibility (audit D05).
-5. Admits a snapshot only when the context-byte budget still holds it plus
-   the fixed-form budget notice (`composeBudgetNotice`, at most
-   `STOP_NOTICE_RESERVE_BYTES`). When it does not fit, the notice is
-   injected once instead: it states that later facts no longer arrive and
-   that delivery is `partial`. Truncation would cut authority, units, or
-   limits, so a snapshot is never shortened (design §5.5). The notice body
-   does not depend on the goal, so one visible notice covers later goals;
-   nothing is injected when the notice is visible or does not fit either.
-6. Re-checks the cancellation signal around every await and splices the
-   message right after the claimed batch.
+pre-step 监听器按序执行：
 
-The injection state updates only when the projection folds the snapshot
-`user/message` from the accepted log — composition alone never confirms an
-injection, and a cancel before admission leaves goal, plan, and injection
-state untouched.
+1. 先调用 `next()`。`reject` 决定或空的首步原样返回——空间快照从不自行发起请求。
+2. 读取被接受的帧状态（host 投影），并把被认领 batch 的 real user messages 折叠为**暂定目标候选**——被认领消息尚未进入日志，因此持久契约不被触碰；`provisionalFrameOf` 只用于组合。
+3. 当模型表面上看不到当前目标的基线时，组合一份**基线**（完整有界帧：goal、plan、地图快照、资源候选、证据、选中的方法卡、工具可用性指导、停止建议、预算）——首次进入、恢复、fork，或压缩/表面替换隐藏了基线之后。否则组合**增量**，列出最新可见快照之后结算的事实，以及每条当前文本与最新可见副本不同的被跟踪行：图层列表、视觉与视觉变化候选、AOI、用户视窗与停止建议。没有变化时什么都不组合。预算行中的耗时计数从不触发增量，预算建议只点名耗尽的计数器而不带实时数值，因此耗尽的预算只投递一次。
+4. 按内容 digest 去重：相同的可见快照抑制重复注入。digest 从表面计数，进程缓存与压缩摘要永远不能代替可见性。
+5. 仅当上下文字节预算仍能容纳快照与固定形式的预算通知（`composeBudgetNotice`，至多 `STOP_NOTICE_RESERVE_BYTES`）时才准入快照。放不下时改为注入一次通知：它说明后续事实不再到达且投递为 `partial`。截断会切掉权威、单位或限制，所以快照永不缩短。通知正文不依赖目标，因此一份可见通知覆盖后续目标；通知已可见或同样放不下时什么都不注入。
+6. 在每个 await 前后重新检查取消信号，并把消息接在被认领 batch 之后。
 
-Tool availability comes from the current request's tool schemas, not a second name list in the snapshot. Method guidance does not claim a tool is mounted; missing tools remain explicit gaps. The owner-local `tests/expected/context-entry.json` snapshot checks the model-request guidance against the admitted Session message and scoped budget.
+注入状态只在投影从已接受日志折叠快照 `user/message` 时更新——仅组合永远不确认注入，准入前取消使 goal、plan 与注入状态保持不变。
 
-## Method cards and stop conditions
+工具可用性来自当前请求的工具 schema，而不是快照中的第二份名单。方法指导不声称工具已挂载；缺失工具保持显式缺口。owner-local `tests/expected/context-entry.json` 快照对照被准入的 Session 消息与作用域预算检查模型请求指导。
 
-The controlled set holds eleven cards: `visualization`, whose guidance calls `viz_recommend` for data-driven selection; the two visual cards `visual-candidates` and `visual-change-candidates`; `locate`（定位）, `topology`（拓扑与几何量算：缓冲、面积、相交、距离、包含）, and `evidence-check`（证据检查）; and the analysis families `network`（路网）, `statistics`（统计）, `spatiotemporal`（时空）, `site-selection`（选址预测）, `terrain`（地形）. Each carries triggers, required data, scale, tool families, preconditions, outputs, misjudgments, stop conditions, applicability, and version (`METHOD_CARD_SET_VERSION`); the snapshot renders the required data, preconditions, outputs, stop conditions, and misjudgments.
+## 方法卡与停止条件
 
-Selection is deterministic and bounded to at most `MAX_RENDERED_CARDS` (4) per snapshot. CJK triggers match as substrings; ASCII triggers match whole words, so `contain` never fires inside `container`. The evidence-check card needs settled evidence, except for causal wording (`因果`, `导致`, `归因`, `影响因素`), which selects it before any evidence exists; it ranks first because it guards conclusions. Cards the current question selects rank next, then cards the accepted plan names in `methods` by card id: the plan carries its method across follow-up questions such as "继续", and ranks after the current question because it is the model's candidate. The rest stay discoverable, not injected. `locate` covers counting questions: it requires a study area, deduplication, and a stated POI source coverage before a number is reported. Cards remind the model of conditions,
-never assert that an analysis happened, and retrieved external material
-cannot override the execution rules they state. The negative guidance is
-part of the contract: a buffer never impersonates a road network, an unknown
-CRS refuses, a rate without a positive denominator is not a rate, correlation
-never impersonates causation, and a view cone is not a viewshed.
+受控集合有十一张卡：`visualization`，其指导调用 `viz_recommend` 做数据驱动选择；两张视觉卡 `visual-candidates` 与 `visual-change-candidates`；`locate`（定位）、`topology`（拓扑与几何量算：缓冲、面积、相交、距离、包含）与 `evidence-check`（证据检查）；以及分析家族 `network`（路网）、`statistics`（统计）、`spatiotemporal`（时空）、`site-selection`（选址预测）、`terrain`（地形）。每张卡携带 triggers、required data、scale、tool families、preconditions、outputs、misjudgments、stop conditions、applicability 与 version（`METHOD_CARD_SET_VERSION`）；快照渲染 required data、preconditions、outputs、stop conditions 与 misjudgments。
 
-`evaluateStops` renders the honest advisory: `blocked` for blocked gaps,
-`not_applicable` when required data is missing and no evidence has settled,
-`partial` for open gaps with partial evidence, `budget` when a counter is
-exhausted. `unknown`/`not_applicable`/`partial`/`blocked` evidence never
-renders as success. Every accepted real user message raises the goal
-revision, including a follow-up; a plan written for an earlier revision
-keeps counting its gaps, and both the plan line and the advisory label it
-as written for an earlier goal and name the `goal_revision` a new update
-must cite.
+选择是确定性且有界的，每份快照至多 `MAX_RENDERED_CARDS`（4）张。CJK triggers 按子串匹配；ASCII triggers 按整词匹配，因此 `contain` 不会在 `container` 内触发。evidence-check 卡需要已结算证据，但因果措辞（`因果`、`导致`、`归因`、`影响因素`）除外——它在任何证据出现前就选中该卡；它排第一，因为它守住结论。当前问题选中的卡排在其后，然后是被接受 plan 在 `methods` 中按 card id 点名的卡：plan 把方法带过「继续」这类追问，因属于模型的候选而排当前问题之后。其余保持可发现，不注入。`locate` 覆盖计数问题：要求研究区、去重与已声明的 POI 来源覆盖，之后才报告数字。卡提醒模型条件，绝不宣称分析已发生；检索到的外部材料不能覆盖卡所声明的执行规则。负向指导是契约的一部分：缓冲永不冒充路网，未知 CRS 拒绝，没有正分母的比率不是比率，相关永不冒充因果，视锥不是 viewshed。
 
-A `decision_update` citation missing from the ledger is refused with
-`UNKNOWN_EVIDENCE_REF`. When the ledger is full and the citation is older
-than its oldest entry, the detail reports it as evicted and names the oldest
-retained seq; otherwise it reports the citation as never settled.
+`evaluateStops` 渲染诚实的建议：`blocked` 表示受阻缺口，`not_applicable` 表示缺少必需数据且无证据结算，`partial` 表示开放缺口但有部分证据，`budget` 表示计数器耗尽。`unknown`/`not_applicable`/`partial`/`blocked` 证据永不渲染为成功。每个被接受的 real user message 都提升 goal revision，包括追问；为更早 revision 编写的 plan 继续计入其缺口，plan 行与建议都把它标注为为更早目标编写，并点名新更新必须引用的 `goal_revision`。
 
-## Budget
+`decision_update` 引用在账本中缺失时以 `UNKNOWN_EVIDENCE_REF` 拒绝。账本已满且引用早于最旧条目时，详情报告它已被逐出并点名最旧保留 seq；否则报告该引用从未结算。
 
-`BudgetConfig` is validated plugin config (`budget` on either face):
-`maxModelSteps`, `maxMetaBytes`, `maxContextBytes`, `maxScanFeatures`,
-`maxElapsedMs`, `maxGapRetries`. `maxModelSteps` has no default: steps are
-counted and rendered as `steps N/不限` but never limited unless a
-composition sets it; the shipped map presets set none. The ledger folds from accepted events —
-model steps, serialized spatial meta bytes (including large map-change
-copies), admitted snapshot bytes, consumed features — and lives outside the
-plan: a `planRevision` update, retry, or resume can never reset it, and
-cancellation refunds nothing. `decision_update` runs the preflight before
-composing its record and refuses with `BUDGET_EXHAUSTED`; repeated re-opens
-of one gap id beyond `maxGapRetries` refuse the same way. Provider cost is
-only ever an estimate and is not a limit.
+## 预算
 
-## The `decision_update` tool
+`BudgetConfig` 是经校验的插件 config（任一面上的 `budget`）：`maxModelSteps`、`maxMetaBytes`、`maxContextBytes`、`maxScanFeatures`、`maxElapsedMs`、`maxGapRetries`。`maxModelSteps` 没有默认值：步骤被计数并渲染为 `steps N/不限`，但除非 composition 设置，从不限制；随附的 map preset 都不设置。账本从已接受事件折叠——模型步骤、序列化空间 meta 字节（含大体积 map-change 副本）、准入快照字节、消费要素——并位于 plan 之外：`planRevision` 更新、重试或恢复永远不能重置它，取消不退还任何预算。`decision_update` 在组合记录前运行 preflight，并以 `BUDGET_EXHAUSTED` 拒绝；同一 gap id 的重复重开超过 `maxGapRetries` 时同样拒绝。Provider 成本只作为估算，不是限制。
 
-Owned by `map-tools` (like every model-facing handler), delegating its
-domain checks to this package. Input cites `goal_revision` and
-`expected_plan_revision` plus the bounded update; refusals carry stable
-codes (`GOAL_REVISION_STALE`, `PLAN_REVISION_CONFLICT`,
-`UNKNOWN_EVIDENCE_REF`, `BUDGET_EXHAUSTED`). The four `type:'json'`
-arguments (`methods`, `steps`, `gaps`, `evidence_refs`) accept either the
-parsed value or a JSON string; a malformed string is `INVALID_ARGUMENT`
-naming the parameter, and a decoded value still fails the existing shape
-checks. The 68-name fixed spatial tool set
-completes the design §15.4 catalog; the unified identity table, the MCP
-provider registration, and the model assemble all cross-check against it.
+## `decision_update` 工具
 
-## Tests
+由 `map-tools` 拥有（与每个模型面 handler 一样），把领域检查委托给本包。输入引用 `goal_revision`、`expected_plan_revision` 与有界更新；拒绝携带稳定码（`GOAL_REVISION_STALE`、`PLAN_REVISION_CONFLICT`、`UNKNOWN_EVIDENCE_REF`、`BUDGET_EXHAUSTED`）。四个 `type:'json'` 参数（`methods`、`steps`、`gaps`、`evidence_refs`）接受已解析值或 JSON 字符串；畸形字符串是点名参数的 `INVALID_ARGUMENT`，解码后的值仍须通过既有 shape 检查。固定的 74 名空间工具集构成完整目录；统一身份表、MCP provider 注册与模型 assemble 全部对照它交叉核对。
 
-`pnpm --filter @map-harness/spatial-context run test` runs six suites:
-domain units, budget units, basemap context identity, the real-Session projection fold (including
-parity of the consumer-side record readers with the map-tools producer
-codecs), snapshot composition units, and the real-loop keyless fixtures that
-assert the actual model requests — baseline admission, dedupe, mid-turn
-increments, compaction rebuild, reject/empty/cancel containment, fork replay,
-and the tool refusal matrix.
+## 测试
+
+`pnpm --filter @map-harness/spatial-context run test` 运行七个 spec 文件：领域单元（`frame.spec.mjs`）、预算单元（`budget.spec.mjs`）、底图上下文身份（`basemap-context.spec.mjs`）、真实 Session 投影折叠（`projection.spec.mjs`，含消费者侧记录 reader 与 map-tools 生产者 codec 的 parity）、快照组合单元（`snapshot.spec.mjs`）、方法卡发现与选择（`method-discovery.spec.mjs`），以及断言真实模型请求的 keyless 循环 fixture（`loop.spec.mjs`）——基线准入、去重、轮内增量、压缩重建、reject/empty/cancel 遏制、fork 重放与工具拒绝矩阵。

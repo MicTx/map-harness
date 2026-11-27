@@ -9,13 +9,13 @@ kind: package-reference
 
 ## 概述
 
-当会话需要地图编辑和空间分析时选择本包。`map_list_basemaps`、`map_set_basemap` 和 `map_set_imagery` 带修订检查地选择来源和影像。`map_edit_annotation` 可更新、删除、设置样式、排序或撤销标记，也可由 Agent 应用或排除视觉候选，并保留原作者。`data_export` 将标记发布为不可变 GeoJSON。`map_observe` 向支持图像输入的模型返回绑定修订的图像。
+当会话需要地图编辑和空间分析时选择本包。`map_list_basemaps`、`map_set_basemap` 和 `map_set_imagery` 带修订检查地选择来源和影像。`map_edit_annotation` 可更新、删除、设置样式、排序或撤销标记，也可由 Agent 应用或排除视觉候选，并保留原作者。`data_export` 把精确的资源/制品引用、单个已加载图层或整图发布为不可变的固定版本制品（geojson、仅点的 csv、kml、shapefile ZIP）；导出只含数据，不含样式或相机。`map_observe` 向支持图像输入的模型返回绑定修订的图像。
 
 历史影像可在 `map_list_basemaps` 中指定 `source_id: 'esri-wayback'`，并可按关注点和缩放级别查询局部证据；`map_set_basemap` 必须指定固定 `release_id`。`map_set_imagery` 选择固定早期 release 时不会自动开启，也不抓取局部证据。当 `early_visible: true` 且两个近期设置均省略时，可见且不透明度为 100% 的近期影像会变为 50%；显式近期设置、已隐藏影像及已调整的不透明度保持不变。`map_get_state` 报告显示状态。发布日期不等于拍摄日期，缺失的拍摄日期保持未知。宿主在应用选择前核验 release。
 
 `map_markup` 把支持图像输入的模型对最新 `map_observe` 附图的判读转成带 WGS84 几何的有界 `sketch` 或 `target` 候选。Agent 可通过 `map_draw` 或 `map_apply_patch` 应用几何，用户仍可审查。候选自评不是概率。
 
-`map_refine_aoi` 用真实建筑足迹替换像素矩形近似的 AOI 候选：以 `candidate_id`（已有候选图层的 bbox）或显式 `bbox`（每边 ≤0.05°）为窗口，向配置的足迹来源（默认 OSM Overpass，部署可在 spatial-connect 的 `footprints` 里覆盖端点、超时、重试与许可）查询建筑，按「是否包含候选质心 → 与候选窗口的叠合比」排序并**全部**返回，不合并、不声称边界。结果是一个真实 Polygon 图层（`add-layer` 候选），每个要素带 `source`/`licence`/`attribution`/`selection`（排序与关系）与 `refines`（被替换的候选 id）；原矩形候选保留不动，结果中列为 `superseded`。来源不可达、无数据、4xx 分别为 `REFINE_SOURCE_UNAVAILABLE` / `REFINE_NO_FOOTPRINTS` / `REFINE_SOURCE_INVALID`，三种情况下候选都原样保留——空结果**不**回退到矩形。确认仍归用户。
+`map_refine_aoi` 用真实建筑足迹替换像素矩形近似的 AOI 候选：以 `candidate_id`（已有候选图层的 bbox）或显式 `bbox`（每边 ≤0.05°）为窗口，向配置的足迹来源（默认 OSM Overpass，部署可在 spatial-connect 的 `footprints` 里覆盖端点、超时、重试与许可）查询建筑，按「是否包含候选质心 → 与候选窗口的叠合比」排序并**全部**返回，不合并、不声称边界。结果是一个真实 Polygon 图层（`add-layer` 候选），每个要素带 `rank`、`containsCentroid`、`overlapRatio`，替换候选时还带 `refines`（该候选 id）；结果对象给出逐要素 `selection`（`rank`、`contains_centroid`、`overlap_ratio`）、`source` 记录（`provider`、`licence`、`attribution`、`retrieved_at`）与 `superseded`（原矩形保留）。来源不可达、无数据、4xx 分别为 `REFINE_SOURCE_UNAVAILABLE` / `REFINE_NO_FOOTPRINTS` / `REFINE_SOURCE_INVALID`，三种情况下候选都原样保留——空结果**不**回退到矩形。确认仍归用户。
 
 比较两期固定 release 时，`map_compare_views` 核验已保存图像字节、发布日期、共同相机/CRS/affine/内容矩形/尺寸与覆盖层组合后返回两图；`map_mark_changes` 返回有界 WGS84 候选。发布日期不等于拍摄日期或变化发生日期；工具不输出面积、精度或召回率。
 
@@ -97,6 +97,8 @@ kind: package-reference
 每次观察都会把一个新的工具结果和图像追加到 Session 历史，不会改写此前前缀。后续模型请求可能再次包含已有观察图像，缓存行为由 provider 所有。
 
 ## 已知限制与延期工作
+
+<a id="known-limitations-and-deferred-work"></a>
 
 - 来源不可用、凭据缺失、视图过期或模型不支持图像时，相应操作仍会拒绝。
 - 没有有效 affine 地理参考的图像是只读证据；数值测量请用 geo_* 或 stats_* 工具。

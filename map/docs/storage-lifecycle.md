@@ -1,6 +1,6 @@
 # 存储对象清单、迁移与生命周期
 
-本文是 map 层自有持久状态的权威清单：每个存储对象的 owner、schema 版本、引用者、备份/恢复顺序和删除前提。实现归 `@map-harness/spatial-storage`（`map/spatial-storage/`）；设计依据是 `.spec/docs/2026-09-23_docs-spatial-agent-architecture_design.md` §7.2/§11.2/§13.2 与审计 D07/D08。上游 Session 日志与 projection cache 的格式归上游所有，本文只约束 map 层对它们的备份、恢复和引用保护行为。
+本文是 map 层自有持久状态的权威清单：每个存储对象的 owner、schema 版本、引用者、备份/恢复顺序和删除前提。实现归 `@map-harness/spatial-storage`（`map/spatial-storage/`）。上游 Session 日志与 projection cache 的格式归上游所有，本文只约束 map 层对它们的备份、恢复和引用保护行为。
 
 ## 每会话独立库
 
@@ -9,7 +9,7 @@
 - **根目录清单** = `sessions/` 目录本身（每子目录一会话库；`listSessionStores(root)` 只读派生）。不设根级共享索引库/索引文件。
 - **跨对话不共享**（显式设计边界）：会话 B 解析会话 A 发布的 ref 得 `CATALOG_NOT_FOUND`（与未知 ref 同答，不泄露存在性）；fork 只继承 session 对象 ACL 状态（父库读、子库写），不继承资源可见性。
 - **保留策略**：默认全保留——会话结束不自动删除任何库；删除只有两条显式路径：库内 staging/孤儿清理（下文），以及根级 `dropSessionStore(root, sessionId)`（显式运维调用，经 `<root>/trash/` 原子中转后删除，唯一整库删除路径；无模型可见工具暴露）。
-- **旧共享库**：升级部署在 `<root>/store.db` 可能遗留旧单库布局的共享库——插件 load 时 warn 一次，不读、不删、不迁移；新布局自新会话首用起生效。迁移工具明确不提供（`.spec/specs/` 发布决策）。
+- **旧共享库**：升级部署在 `<root>/store.db` 可能遗留旧单库布局的共享库——插件 load 时 warn 一次，不读、不删、不迁移；新布局自新会话首用起生效。迁移工具明确不提供。
 
 ## 存储对象清单
 
@@ -36,11 +36,11 @@
 | session → session | `session_refs`（`parent_session_id`，记于子库） | fork 父子指针；资源可见性不跨库继承（跨对话不共享，fork 只继承 session 对象 ACL 状态） |
 | backup pin → 任意目标 | `backup_pins`（`target_kind`/`target_id`/`reason`） | 备份窗口内显式固定，备份完成显式释放 |
 
-保护规则：存在任一保护边的已发布版本不可回收；没有引用所有者时同样拒绝自动删除（P0 不自动 GC 已发布资源，见 spec §2.1）。引用一律存相对路径与稳定 id，不存本机绝对路径——备份恢复到新位置后引用仍可解析。
+保护规则：存在任一保护边的已发布版本不可回收；没有引用所有者时同样拒绝自动删除（已发布资源不自动回收，回收路径见「删除前提」）。引用一律存相对路径与稳定 id，不存本机绝对路径——备份恢复到新位置后引用仍可解析。
 
 ## 迁移
 
-- `SPATIAL_STORE_SCHEMA_VERSION` 单调递增，存于 `PRAGMA user_version`；迁移清单 forward-only，禁止降级，**逐库独立执行**（每会话库各自持有版本号、journal 与备份，一个库的升级不触碰邻居库）。当前版本为 **4**：`p0b-catalog-chain` 步骤在基线之上加入 P0b 目录链 schema（`catalog_resources` 的逻辑资源/摘要/CRS/授权列、`feature_refs`、`semantic_bindings`、`artifacts` 的产物身份列、`intents` 的发布结果列）；`spatial-governance` 步骤（v3）加入治理 ACL/审计表并为既有对象回填 `granted` grant；`semantic-index` 步骤（v4）加入 `semantic_definitions` 与 `semantic_aliases`，定义版本和别名索引由 `spatial-catalog` 在 ACL 同事务中发布。全部为带默认值的附加列/新表，v1 行保持有效。目录 repository/API 与其事务归 `map/spatial-catalog`（见 [spatial-catalog.md](spatial-catalog.md)），schema 版本本身仍由本包的单一迁移阶梯拥有。打开时发现比当前构建更新的版本：显式拒绝（`future-schema-version`），不猜测、不降级、不静默只读。
+- `SPATIAL_STORE_SCHEMA_VERSION` 单调递增，存于 `PRAGMA user_version`；迁移清单 forward-only，禁止降级，**逐库独立执行**（每会话库各自持有版本号、journal 与备份，一个库的升级不触碰邻居库）。当前版本为 **6**，步骤依次为：`baseline`（v1）；`p0b-catalog-chain`（v2）加入目录链 schema（`catalog_resources` 的逻辑资源/摘要/CRS/授权列、`feature_refs`、`semantic_bindings`、`artifacts` 的产物身份列、`intents` 的发布结果列）；`spatial-governance`（v3）加入治理 ACL/审计表并为既有对象回填 `granted` grant；`semantic-index`（v4）加入 `semantic_definitions` 与 `semantic_aliases`，定义版本和别名索引由 `spatial-catalog` 在 ACL 同事务中发布；`published-version-gc`（v5）加入 `reader_pins` 与 `released_versions`；`governance-tenant-recall`（v6）把 ACL 主键升为 `(tenant, object_kind, ref, domain)`、按本部署租户回填既有行，并加入只追加的 `governance_copies` 与 `governance_recall`。全部为带默认值的附加列/新表，v1 行保持有效。目录 repository/API 与其事务归 `map/spatial-catalog`（见 [spatial-catalog.md](spatial-catalog.md)），schema 版本本身仍由本包的单一迁移阶梯拥有。打开时发现比当前构建更新的版本：显式拒绝（`future-schema-version`），不猜测、不降级、不静默只读。
 - 迁移前先 dry-run（只读连接列出待执行步骤，不写任何字节）；写路径执行 backup-before-write（`VACUUM INTO` 一致性快照 + sha256）。
 - 每个迁移步骤一个事务：DDL、`migration_journal` 行、版本号更新同事务提交；进程在任意点崩溃（含 SIGKILL），SQLite 回滚日志保证该步骤整体生效或整体消失，重跑从已提交版本继续。
 - 幂等：已在目标版本时迁移是空操作。checksum：迁移报告记录前后整库文件 sha256；备份 manifest 记录逐条目 sha256。
@@ -49,7 +49,7 @@
 
 备份内容：资源/产物文件字节、`store.db` 一致性快照、指定 Session 日志字节、manifest（manifest 版本、store schema 版本、逐条目 sha256/字节数、可选授权摘要）。发布顺序：全部条目写入 staging → 逐条目校验 digest → 原子 rename 成正式 bundle；staging 内不完整产物不是备份，按孤儿清理回收。
 
-恢复按层执行并逐层报告状态（跨文件/数据库/会话无全局原子性，报告必须分层，见 spec §7）：
+恢复按层执行并逐层报告状态（跨文件/数据库/会话无全局原子性，报告必须分层）：
 
 1. resource/artifact 文件字节（已存在且不同→冲突保留，绝不覆盖）。
 2. `store.db`（目标无库→恢复并校验 schema 版本；同 digest→跳过；不同→拒绝，绝不覆盖活库）。
@@ -69,7 +69,7 @@
 | 清理自身 | 必须持有 `cleanup` lease（过期视为无主）；两个清理者并发时后者拒绝（`lease-held`） |
 | 整个会话库（`sessions/<sessionId>/`） | 只经显式 `dropSessionStore(root, sessionId)`：会话结束不触发、无任何自动路径；先原子 rename 入根级 `trash/` 再删除（link 形态只 unlink 不跟随）；库不存在时 `missing-session-store` 拒绝 |
 
-并发约定：活动写入以 staging 行 `active` 状态与 pin/lease 表达；清理执行阶段对每个候选重新核对（plan 与 execute 之间加入的 pin/活动写入会让该候选跳过），防止以过期计划删除新受保护对象。已发布版本同一复核覆盖 reader pin：读者先 `acquireReaderPin` 后使用、用毕 `releaseReaderPin`；所有者以 `releaseVersion` 显式终结（设计 §6.4「先 pin 后使用、终结后释放」）。会话关闭不触发任何回收，也不等于释放引用——保护边存于库内，只有显式 drop 或释放才消失。schema v5 新增 `reader_pins`/`released_versions` 两表（monotonic 迁移，backup-before-write 前置）。
+并发约定：活动写入以 staging 行 `active` 状态与 pin/lease 表达；清理执行阶段对每个候选重新核对（plan 与 execute 之间加入的 pin/活动写入会让该候选跳过），防止以过期计划删除新受保护对象。已发布版本同一复核覆盖 reader pin：读者先 `acquireReaderPin` 后使用、用毕 `releaseReaderPin`；所有者以 `releaseVersion` 显式终结（先 pin 后使用、终结后释放）。会话关闭不触发任何回收，也不等于释放引用——保护边存于库内，只有显式 drop 或释放才消失。schema v5 新增 `reader_pins`/`released_versions` 两表（monotonic 迁移，backup-before-write 前置）。
 
 ## 诊断与失败语义
 
@@ -101,6 +101,6 @@
 
 **已发布版本回收**：`releaseVersion(db, { kind, id })` 显式终结（仅 resource/artifact 字节版本；`unsupported-gc-target`/`unknown-target` 具名拒绝）→ 读者侧 `acquireReaderPin`/`releaseReaderPin`（先 pin 后使用）→ `collectGarbage(root, db, owner, ttlMs)` 一次完成 lease→plan→execute→release；`planCleanup` 的 dry-run 同样列出 released 候选（`published-version` 条目，保留原因 `pinned`）。`doc-sync` 门禁约束文档与实现一致：回收候选类、拒绝码与测试断言同源（`map/spatial-storage/tests/gc.spec.mjs`）。
 
-**定期核验**：`verifyStore(sessionStoreRoot(root, sessionId))` 逐库分层报告 missing-file/digest-mismatch/permission-denied/not-regular-file；报告只读，恢复决策由运维依据报告做出（P0 不自动删除任何已发布条目）。一个库的损伤只标记该库的报告，不影响邻居库。
+**定期核验**：`verifyStore(sessionStoreRoot(root, sessionId))` 逐库分层报告 missing-file/digest-mismatch/permission-denied/not-regular-file；报告只读，恢复决策由运维依据报告做出（已发布条目只经 `releaseVersion` 与清理回收，不自动删除）。一个库的损伤只标记该库的报告，不影响邻居库。
 
 **会话库运维**：`listSessionStores(root)` 从 `sessions/` 目录只读派生清单（含每库是否已有数据库文件；模式外/外来条目跳过且不删除）。保留策略为默认全保留；确认废弃的会话库经 `dropSessionStore(root, sessionId)` 显式删除（唯一整库删除路径，无模型可见工具暴露）。升级部署遗留的根级旧共享库 `<root>/store.db`：插件 load 时 warn 一次，不读、不删、不迁移。

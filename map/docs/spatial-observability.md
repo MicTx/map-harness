@@ -10,7 +10,7 @@ English name: **Spatial observability and operations**. 包标识 `@map-harness/
 
 | 字段 | 形态 | 说明 |
 | --- | --- | --- |
-| `operationRef` | `op:<domain>:<sessionId>#<sourceCallSeq>` | 授权域 + Session 调用身份（设计 §6.4；request digest 是独立的一致性校验，不入身份） |
+| `operationRef` | `op:<domain>:<sessionId>#<sourceCallSeq>` | 授权域 + Session 调用身份（request digest 是独立的一致性校验，不入身份） |
 | `runId` | 可选 | durable run 标识（`run_submit` 交付的作业引用） |
 | `goalRevision` | 可选 | 决策帧目标 revision |
 | `traceId` | `trace-` + 16 hex（高基数） | 跨工具/产物/Session/render 跟踪；只进日志与 trace payload |
@@ -21,13 +21,13 @@ English name: **Spatial observability and operations**. 包标识 `@map-harness/
 
 结果（closed，六值）：`succeeded` / `partial` / `failed` / `cancelled` / `outcome_unknown`（无法判定结算——例如 worker 死后无记录）/ `degraded`（交付但能力或遥测可见降级）。结果永不默认；`failed`/`degraded` 结算必须携带错误码。
 
-错误码（closed，版本化；增改即契约版本变更）：`FLUSH_FAILED`、`ARTIFACT_PUBLISH_FAILED`、`PROVIDER_RATE_LIMITED`、`PROVIDER_UNAVAILABLE`、`WORKER_CRASHED`、`RENDER_FAILED`、`CATALOG_LAGGING`、`CATALOG_UNAVAILABLE`、`TELEMETRY_DEGRADED`、`OPERATION_CONFLICT`。错误码是机器协议，日志文本只是辅助（设计 §6.5）。
+错误码（closed，版本化；增改即契约版本变更）：`FLUSH_FAILED`、`ARTIFACT_PUBLISH_FAILED`、`PROVIDER_RATE_LIMITED`、`PROVIDER_UNAVAILABLE`、`WORKER_CRASHED`、`RENDER_FAILED`、`CATALOG_LAGGING`、`CATALOG_UNAVAILABLE`、`TELEMETRY_DEGRADED`、`OPERATION_CONFLICT`。错误码是机器协议，日志文本只是辅助。
 
 ### 1.3 低基数指标
 
 指标名、标签键、标签值全部来自闭表（`OBS_METRICS`/`OBS_METRIC_LABEL_KEYS`/plane/segment/outcome/code/provider/kind）；每个指标声明的标签键**必填**。每个指标的基数由闭表天然封顶（最大组合 = 各词表笛卡尔积），超界即响亮拒绝——载荷值、operationRef、traceId 进入标签是代码缺陷，必须在采样器处失败而不是污染外部监控系统。
 
-分段词表（设计 §13.3 测量点）：`context`/`mcp`/`compute`/`commit`/`flush`/`render`/`scan`/`cancel`。计数器覆盖 operations、flush/artifact-publish/render 失败、provider 调用与限流、故障注入、遥测自弃。
+分段词表：`context`/`mcp`/`compute`/`commit`/`flush`/`render`/`scan`/`cancel`。计数器覆盖 operations、flush/artifact-publish/render 失败、provider 调用与限流、故障注入、遥测自弃。
 
 ### 1.4 脱敏
 
@@ -38,12 +38,12 @@ English name: **Spatial observability and operations**. 包标识 `@map-harness/
 - `warn`/`error`/`audit` **永不参与采样**；`debug`/`info` 按 keep-1-in-N（`sampleEvery`，默认全保留）。
 - 缓冲固定容量；溢出按类别精确计数（sample/audit 分列）并置 `degraded`。
 - sink 抛错被捕获并按类计数，绝不向调用方传播。
-- `runtime.telemetryHealth()` 返回逐类精确丢弃数；`runtime.reportTelemetryHealth()` 将其折叠进 `process` 健康平面（降级为持续事实：本轮发生过丢弃就如实报告）。
-- 遥测自身失败只计数，绝不阻塞空间主结果（spec §7）。
+- `runtime.telemetryHealth()` 返回逐类精确丢弃数；`runtime.reportTelemetryHealth()` 将其折叠进 `process` 健康平面（降级为持续事实：统计周期内发生过丢弃就如实报告）。
+- 遥测自身失败只计数，绝不阻塞空间主结果。
 
 ## 3. 健康平面
 
-六个平面独立报告（`process`/`provider`/`catalog`/`run`/`data`/`render`），状态 `ready`/`degraded`/`unavailable`；readiness 是**派生**聚合，`heldBack` 按 unavailable→degraded 列出拖延平面——不用一个 boolean 掩盖部分故障（spec §2.4）。每次状态翻转进入有界迁移史并写入审计日志；同状态重报刷新 detail、清陈旧 code、不算迁移。
+六个平面独立报告（`process`/`provider`/`catalog`/`run`/`data`/`render`），状态 `ready`/`degraded`/`unavailable`；readiness 是**派生**聚合，`heldBack` 按 unavailable→degraded 列出拖延平面——不用一个 boolean 掩盖部分故障。每次状态翻转进入有界迁移史并写入审计日志；同状态重报刷新 detail、清陈旧 code、不算迁移。
 
 ## 4. 故障注入矩阵与恢复
 
@@ -68,9 +68,9 @@ English name: **Spatial observability and operations**. 包标识 `@map-harness/
 ### 6.1 重试
 
 1. 从错误结果或审计日志取 `operationRef`/`runId`；`parseOperationRef` 还原 domain/session/sourceCallSeq。
-2. 判类：`PROVIDER_RATE_LIMITED` → 退避后以**同一操作身份**重发，服务端按已发布记录幂等返回（设计 §6.4：retry 只复用已发布产物，缺记录不盲算）；`PROVIDER_UNAVAILABLE` → 查 §6.2 健康面，恢复后重试；`FLUSH_FAILED`/`ARTIFACT_PUBLISH_FAILED` → **逻辑接受状态有效**，只补持久化/发布步骤，不重跑计算。
+2. 判类：`PROVIDER_RATE_LIMITED` → 退避后以**同一操作身份**重发，服务端按已发布记录幂等返回（retry 只复用已发布产物，缺记录不盲算）；`PROVIDER_UNAVAILABLE` → 查 §6.2 健康面，恢复后重试；`FLUSH_FAILED`/`ARTIFACT_PUBLISH_FAILED` → **逻辑接受状态有效**，只补持久化/发布步骤，不重跑计算。
 3. `WORKER_CRASHED` 且无结算记录 → 按 `outcome_unknown` 处理：先查 run 记录确认无已提交产物，再以新操作明确本次输入重放；禁止把崩溃伪装成成功。
-4. 同一身份不同参数 → `OPERATION_CONFLICT`，拒绝盲重发（审计 D07/C01）。
+4. 同一身份不同参数 → `OPERATION_CONFLICT`，拒绝盲重发。
 
 ### 6.2 查询（诊断入口）
 

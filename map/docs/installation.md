@@ -50,7 +50,7 @@ map-harness manage import    --apply --plan <file>
 - `install` 要求 `--package-root` 指向解压后的 managed 包目录、`--expected` 指向**独立保存**的 release identity 文件（`format: map-harness-install-identity-1`，含 product/distribution/channel/target/version/identityRevision/sourceDigest/payloadSha256），包内 manifest 自身不作可信身份输入。`install-map.sh`/`install-map.cmd` 先校验 `--manager-sha256 <64-hex>`（来自独立取得的 release checksums）再执行包内原生 manager；不匹配即退出，不执行任何包内代码。
 - `--install-root` 或 `MAPHARNESS_INSTALL_ROOT` 只选择程序根，不影响数据根；`--data-home` 记录启动器默认数据根，安装器从不创建它。
 - 安装事务顺序为 inspect → stage → verify → quiesce → backup-if-needed → commit → health → receipt：初始安装只认领空根，逐文件校验后发布不可变 `versions/<version>-<digest>/` 载荷、双槽文本指针（`active-slot`、`slots/A`、`slots/B`）与 `receipts/<operation-id>.json`，最后原子切换 active slot。同版本同摘要为 no-op；数据根、安装根与 stock DSH 根互相禁止重叠。
-- `status` 报告布局状态（`absent`/`not-directory`/`empty`/`foreign`/`incomplete`/`damaged`/`ready`）与活跃版本；`doctor` 额外逐项校验布局、载荷字节与启动器字节。两者不启动服务、不读数据根内容。退出码：0 成功，2 usage，3 conflict，4 busy，5 environment（[定义](../bin/manage.mjs)）。
+- `status` 报告布局状态（`absent`/`not-directory`/`empty`/`uninstalled`/`foreign`/`incomplete`/`damaged`/`ready`）与活跃版本；`doctor` 额外逐项校验布局、载荷字节与启动器字节。两者不启动服务、不读数据根内容。退出码：0 成功，2 usage，3 conflict，4 busy，5 environment（[定义](../bin/manage.mjs)）。
 - 所有维护命令都接受 `--install-root <dir>` 或 `MAPHARNESS_INSTALL_ROOT` 选择程序根；用法行只为简洁省略。
 - `update` 只接受同 product/channel/target 的更高版本（普通 update 拒绝降级）：`--archive` 必须配 `--checksums`（JSON 格式 `map-harness-update-checksums-1`，含 `archiveSha256`、`packageName`、`files[]`、`maxBytes`、`expected`），先按独立摘要校验归档再解压；`--package-root` 配 `--expected` 直接使用已验证的解压目录。`--dry-run` 完成校验与数据根状态判断后输出 `state: not-committed, result: dry-run` 的 receipt，不写载荷、不切槽。相同版本相同摘要为 `no-op`；数据根主服务忙时报 `MAP_INSTANCE_BUSY`，数据根无 Map 标记时报 `MAP_DATA_UNKNOWN`，都不推进提交。健康检查失败且数据未升级时自动切回旧槽；后续状态见 receipt 的 `committed`/`cleanup-pending`/`outcome-unknown`。
 - `rollback` 只切回本安装中已登记、receipt 绑定且载荷校验通过的旧版本目录（`--to <version>`），不写新字节；仅当旧版本可读当前 `dataCompatibility` 时才允许，否则保持当前选择并报告恢复备份路径。
@@ -70,7 +70,7 @@ map-harness manage import    --apply --plan <file>
   .map-maintenance.lock         安装维护锁
 ```
 
-安装根只拥有登记条目；未知文件保留并报告。启动器经文本指针定位当前版本，不依赖 PATH 中的 Node 或 Python。Windows x64 的更新、回滚与卸载通过外置事务 worker 执行：`delegateWindowsTransaction` 在 win32 以 `process.execPath manage transaction-worker <request> <result>` 启动安装树外已校验 worker，等待归属安装树进程退出后以 `inPlace:true` 执行真实事务并写最终 receipt；本交付未在真实 Windows 主机验证进程枚举、SEA 自替换与命名信号量维护锁路径，不声明 Windows 平台资格。
+安装根只拥有登记条目；未知文件保留并报告。启动器经文本指针定位当前版本，不依赖 PATH 中的 Node 或 Python。Windows x64 的更新、回滚与卸载通过外置事务 worker 执行：`delegateWindowsTransaction` 在 win32 以 `process.execPath manage transaction-worker <request> <result>` 启动安装树外已校验 worker，等待归属安装树进程退出后以 `inPlace:true` 执行真实事务并写最终 receipt。
 
 ## 旧数据导入
 
@@ -86,7 +86,7 @@ map-harness manage import    --apply --plan <file>
 
 ## 迁移：从共享 `~/.dsh` 升级
 
-旧版 Map 与 stock DSH 共用 `~/.dsh`（`MAPHARNESS_HOME → DSH_HOME → ~/.dsh`）；升级后旧数据与 stock DSH 不可再共享。升级到独立数据根的步骤见[升级指南](../../docs/upgrade-guide/v0.2.1-rc.3/map-standalone-home/guide.zh.md)。要点：不需要迁移时首次启动自动创建新的空数据根；要迁移旧数据则应在首次启动前对空目标执行导入。旧 `MAPHARNESS_HOME` 无标记非空根需先显式导入；`.credentials.yaml`、`.env` 与供应商 Key 不迁移，需在新实例重新配置。
+旧版 Map 与 stock DSH 共用 `~/.dsh`（`MAPHARNESS_HOME → DSH_HOME → ~/.dsh`）；升级后旧数据与 stock DSH 不可再共享。升级到独立数据根的步骤见[升级指南](../../docs/upgrade-guide/v0.2.2-rc.3/map-standalone-home/guide.zh.md)。要点：不需要迁移时首次启动自动创建新的空数据根；要迁移旧数据则应在首次启动前对空目标执行导入。旧 `MAPHARNESS_HOME` 无标记非空根需先显式导入；`.credentials.yaml`、`.env` 与供应商 Key 不迁移，需在新实例重新配置。
 
 ## 错误码速查
 

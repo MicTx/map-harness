@@ -1,10 +1,69 @@
+---
+description: "为会话提供一份实时地图状态：模型经地图工具修改，用户经 ArcGIS 图层面板修改，并在重载与回放后恢复。"
+kind: package-reference
+---
+
 # @map-harness/map-container
 
 [English](README.md) | 中文
 
-本会话的地图：宿主侧的权威 `mapContainer` 会话投影及其 `ctx.map` 只读面，以及浏览器侧的地图标签页——画布与图层管理面板。一份由会话日志折叠出的地图状态；模型经 `map_*` 工具写入，用户经图层面板的变更路由绘制、编辑、删除、撤销并导出标记。
+## 摘要
 
-## 宿主半
+会话中的实时地图：模型经 `map_*` 工具读取并改变同一份地图状态，用户在 ArcGIS 标签页中平移、缩放、设置图层样式并绘制标记。两侧共享由会话日志折叠出的一份修订状态，因此重载、回放或切换会话会恢复同样的图层、相机、候选与标记。本包还拥有观察与来源路由；地图工具经 `ctx.map` 读取该状态。
+
+## 目录
+
+- [使用本包](#use-this-package)
+- [理解实现](#understand-the-implementation)
+- [进一步探索](#further-exploration)
+- [模型体验](#model-experience)
+- [已知限制与延后工作](#known-limitations-and-deferred-work)
+- [开发备注](#dev-note)
+
+-----
+
+<a id="use-this-package"></a>
+## 使用本包
+
+在 Agent preset 暴露地图工具、Web 客户端加载地图标签页的组合中挂载此插件。
+
+### 何时选择
+
+当会话需要一份共享地图状态时选择本包：模型经 `map_*` 工具写入，用户经图层面板编辑。不希望暴露或截取地图的会话应省略地图 profile；没有本包时工具没有可解析的地图服务。
+
+### 最小配置
+
+```yaml
+- id: map-container
+  name: '@map-harness/map-container'
+```
+
+| 字段 | 缺省 | 含义 |
+|---|---|---|
+| `sources` | 内建预设 | 部署对底图预设、凭据绑定、自定义来源描述、目录限制、出站代理与来源写入锁的覆盖。 |
+| `observation.capturePolicy` | `unverified` | 随观察记录来源策略元数据；不阻止截图。 |
+| `observation.maxBytes` | `8388608` | 已准入 PNG 字节上限。 |
+| `observation.maxPixels` | `16777216` | 解码像素上限。 |
+| `observation.maxDimension` | `8192` | 解码后单边像素上限。 |
+| `observation.maxPending` / `maxEarlyClaims` | `64` / `64` | 待处理观察等待与停放的早期认领，各上限 `1024`。 |
+| `observation.vision` | 无 | 部署授权的 `provider`/`model` 路由，文本 Session 可把观察委托给它。 |
+| `interaction.maxActions` / `maxObservations` / `maxElapsedMs` | 不限 | 每轮 `map_use` 次数、`map_observe` 次数与墙钟上限。 |
+| `interaction.maxPending` / `maxEarlyClaims` | `16` / `16` | 待处理交互等待与停放的早期认领。 |
+| `wayback.cacheTtlMs` | `300000` | 目录刷新间隔，最长一天。 |
+| `wayback.localCacheMaxEntries` | `64` | 局部证据缓存条目，最多 `256`。 |
+| `wayback.maxConcurrentRequests` / `requestTimeoutMs` | `4` / `15000` | 目录请求并发与单请求超时（最多 `120000`）。 |
+
+缺省配置取全部默认值；无意义的值在加载时使插件失败，而不是截断。接受的 schema 由 [`src/plugin.ts`](src/plugin.ts) 定义，随附的挂载行见 [`map/profiles/map-web/cordis.patch.yml`](../profiles/map-web/cordis.patch.yml)。
+
+-----
+
+<a id="understand-the-implementation"></a>
+## 理解实现
+
+<details>
+<summary>实现细节 — 点击展开</summary>
+
+### 宿主半
 
 连续 `map_use` 的控制状态位于 `mapContainer.interaction`。每轮 `interaction.maxActions`、`maxObservations` 和 `maxElapsedMs` 均可选，默认不限。可恢复失败保留本轮控制；用户接管或接受 `finish` 会停止本轮。`/api/map/use` 将有界 claim/result/cancel 与会话配对；重放恢复状态而不重做 SDK 动作。详见[连续地图操作](../docs/map-container-binding.md#连续地图操作map_use)。
 
@@ -16,10 +75,9 @@
 
 `observationHistory` 有界保存观察记录；`comparisons` 保存两图 id、字节摘要、固定 release、共同视角与限制的版本化记录；`visualChanges` 保存绑定单个 comparison 与同一 affine 的双图变化候选。比较创建与候选决定都从已接受工具结果折叠，不重新截图或请求模型；重放从会话日志恢复两图证据和决定。
 
-
 - `mapContainer` 投影把已接受的 `map_*` 工具结果（`tool/result.meta` 中带版本的 `map-change` 元数据）折叠为持久图层清单、视图、研究区、操作账本与在途调用表。折叠是会话日志的纯同步函数，重放可重建同一张地图。
 - `ctx.map`（`MapContainerService`）供工具读取该状态，没有写路径。
-- `POST /api/map/change` 是用户写入路径。它按浏览器看到的修订号、并以模型变更同样的候选校验接纳一个有界变更（`set-layer-state`、`reorder-layers`、`remove-layer`、`set-symbol-preset`、`set-basemap`、`set-imagery-display`、`set-view`，以及仅限用户标记的 `annotation-create`、`annotation-update`、`annotation-delete`、`annotation-undo`），然后把一条 `map-user-change` 通知注入 live agent 的 next-step 收件箱，不唤醒模型。折叠在收件箱插入提交时应用该通知，因此响应返回时地图已改变；之后的认领按同一 operation id 重放。标记记录使用 `[map-user-change v3]` 标记；影像显示记录使用 `[map-user-change v7 imagery]` 标记；静止相机视图记录使用 `[map-user-change v8 view]` 标记；v1/v2 通知仍可读取，但不能携带标记字段。宿主派生标记 feature id、时间戳、白名单属性、逆快照与摘要；已应用 operation id 重试返回已接受修订号且不再注入通知；更新携带目标 feature 的已接受更新时间作为 feature 级 CAS，歧义的网络重试只在同 revision 且同完整载荷时复用 operation id。拒绝使用固定码：`invalid-change`、`unknown-session`、`stale-revision`、`layer-unknown`、`preset-unknown`、`oversized`、`annotation-limit`、`geometry-invalid`、`annotation-unknown`、`annotation-protected`。
+- `POST /api/map/change` 是用户写入路径。它按浏览器看到的修订号、并以模型变更同样的候选校验接纳一个有界变更（`set-layer-state`、`reorder-layers`、`remove-layer`、`set-symbol-preset`、`set-basemap`、`set-imagery-display`、`set-view`，以及仅限用户标记的 `annotation-create`、`annotation-update`、`annotation-delete`、`annotation-undo`），然后把一条 `map-user-change` 通知注入 live agent 的 next-step 收件箱，不唤醒模型。折叠在收件箱插入提交时应用该通知，因此响应返回时地图已改变；之后的认领按同一 operation id 重放。标记记录使用 `[map-user-change v3]` 标记；普通图层、底图与状态变更使用 `[map-user-change v2]` 标记；影像显示记录使用 `[map-user-change v7 imagery]` 标记；静止相机视图记录使用 `[map-user-change v8 view]` 标记。其余候选与视觉变化标记见「模型体验」；v1 通知仍可读取，但不能携带标记字段。宿主派生标记 feature id、时间戳、白名单属性、逆快照与摘要；已应用 operation id 重试返回已接受修订号且不再注入通知；更新携带目标 feature 的已接受更新时间作为 feature 级 CAS，歧义的网络重试只在同 revision 且同完整载荷时复用 operation id。拒绝使用固定码：`invalid-change`、`unknown-session`、`stale-revision`、`layer-unknown`、`preset-unknown`、`oversized`、`annotation-limit`、`geometry-invalid`、`annotation-unknown`、`annotation-protected`。
 - `set-wayback-comparison` 通知记录两个不同的官方局部 release 和关注点，不切换当前底图。宿主在准备两份来源前后检查实况视窗与局部证据。该操作使用 `[map-user-change v4]` 标记；投影重放保存的描述，不重新请求外部服务。当前 schema 中省略可选字段的记录会在身份检查前补齐，来源事实发生变化仍返回 `SOURCE_CHANGED`；固定 Wayback release 保留各自的 release 身份，不回退到目录占位记录。
 - 视觉观察服务把一次 `map_observe` 等待与一次客户端截图配对：已接受的 `tool/call` 播种 `observationRequest`，客户端仅在精确修订渲染后认领不透明令牌、截图并携带令牌和回执提交；宿主以共享严格回执 schema、当前请求/修订/来源身份、规范 base64 与一次有界 PNG 解码校验。`POST /api/map/observation` 是承载 `claim`、`capture`、`decline` 与令牌认证 `cancel` 的单一路由；纯 Node 宿主调用同一服务。早期认领仅保留至自身截止时间。无效或错误令牌提交不会消费在途等待；有效截图、decline、取消、超时或 dispose 才释放它。附件保存后，工具经 `readImage` 读回并核对字节、sha256、PNG 类型、长度和尺寸与已准入截图完全一致；归一化或存储漂移会拒绝记录。接纳记录经 `map-observation` meta v1 折叠到 `latestObservation`。
 - `Config.observation` 在 provider 加载时解析来源策略元数据和资源限制。`capturePolicy` 与来源许可不阻止截图；不可用来源和无效截图身份仍会拒绝。隐藏或零透明图层不进入证据。`MAX_OBSERVATION_BYTES` 表示默认字节上限；`maxBytes` 可以覆写。默认限制为 8,388,608 字节、16,777,216 像素、单边 8,192 像素，以及 64 个待处理等待/早期认领；待处理数最多可配置为 1,024。可选 `vision`（`provider`/`model`）声明文本模型可委托的视觉路由：仅当 Session 的子代理模型策略授权该路由且该模型经校验接受图像时，`map_observe` 经视觉子会话读图，观察记录升为版本 4。来源许可是可读事实：`osm-standard` 的 `automatedMapUse` 默认 `unverified`，部署可显式声明 `allowed`，不再有 OSM 专属的硬禁止。
@@ -27,7 +85,7 @@
 - Session 绑定来源路由只暴露部署拥有的事实：`/api/map/sources/catalog` 返回有界公开页，`/api/map/sources/render` 返回已接受投影状态的精确 carrier recipe，`/api/map/sources/resource` 在严格身份、epoch、provider、尺寸、媒体类型、DNS 与重定向检查后只接纳封闭 metadata/tile/export 操作。受控响应使用有界读取和显式缓存策略；失败携带稳定来源错误码，不含私有上游细节。服务重载在等待卸载完成前注销全部三条路径，使新服务可以立即重新注册。
 - `GET /api/map/artifact` 把一个精确版本目录对象的字节流式发给该会话的浏览器：参数集恰为 `session` + `ref`（`res-…@vN` / `art-…@vN`），读取经 `SpatialCatalogService.forSession(session)`（会话隔离、授权与全内容摘要校验），任何失败都以固定码回答——`unknown-session`、`unknown-ref`、`unauthorized`、`digest-mismatch`——且不含存储细节。
 
-## 浏览器半
+### 浏览器半
 
 地图停止按钮在 390px 下仍可达，并跟随浅色与深色主题。指针、滚轮、绘制和键盘接管立即失效本地待执行动作，宿主通知使停止状态跨刷新保留。相机目标已接受不代表画面已呈现：被抑制的待执行相机写报告 `CAMERA_SUPERSEDED`，已接受逻辑修订仍保留在历史中。像素平移/缩放保留捕获时的 SDK scale 和 rotation；SDK LOD zoom 不等于应用按比例尺定义的 zoom。
 
@@ -47,7 +105,7 @@
 - `MapOccurrence.captureView()` 与观察认领共用类型化 `captureViewOf(MapView | SceneView)` 适配器和同一截图事务（`observation-capture.ts`）。截图尺寸取自已安装 SDK 的 `Screenshot.data.width/height`；事务冻结 occurrence/view/revision/camera/gesture/layout/source 身份，使用同一取消信号和绝对截止时间，并在每个异步阶段后重新读取状态。观察截图期间若 ArcGIS `updating` 状态变化，客户端会等待连续两帧稳定并在原截止时间内重试；相机、来源、布局、修订或渲染健康变化仍拒绝。它把标注和完整来源署名换行合成为采用主题 token 颜色的页脚行，再用实际 `toMap` 样本推导 affine 系数并校验四个独立点（`capture-math.ts`）。无法读取相机时产生 `georeference.kind: 'none'` 与 `unreadable-camera`；`captureView()` 仍解析 `{ dataUrl, viewport }`。缺失/已销毁视图、SDK 停滞或抛错会以普通 `CaptureError` 对象 reject（`no-view` / `capture-timeout` / 带 `detail` 的 `capture-failed`）。`view-policy.ts` 同时拥有 zoom/scale 互逆对与取景估算。
 - 每次 2D 相机静止都 POST 到 `/api/map/viewport`（`viewport.ts` 按会话保留最新一份，最多 256 个会话）。用户手势后静止的相机若不同于已接受的 `mapContainer.view`，还会写入一条 `set-view` 用户变更，因此重开或切换会话会恢复最终相机和最终图层状态。spatial-context 快照把它渲染为 `用户视窗` 行，模型无需对话消息即可基于用户所见推理。`gesture.ts` 仍做相机归因（`syncCamera`、focus `goTo` 的程序化写入静音），仅供测试指标；手势文本不进入对话。画布将 ArcGIS 清空后的 UI 与 overlay 内层保持指针穿透，未遮挡区域的拖拽与滚轮直达视图表面；组合用例断言实时相机位移且最新上报与新相机一致。
 
-## 会话工具卡片
+### 会话工具卡片
 
 - `src/tool-cards/` 是全部空间工具唯一的展示字典：每个工具一条中文动作短语、一个图标类别，以及卡片列出的参数与结果字段，配带单位的格式化器（米/公里、平方米/平方公里、WGS84 度、计数）。几何数组与大段 JSON 不进卡片；残缺或流式中的参数退化为只显示动作名。
 - 浏览器按字典条目各注册一个 keyed `tool.call.toolview` 行（`MapToolCard`）。行只从持久化的调用切片派生标题（`动作 · 对象`）、参数与结果行和失败错误码，因此实时流与回放渲染一致；字典之外的工具保持通用行。
@@ -55,7 +113,7 @@
 - 新增或改名空间工具必须在同一改动里补字典条目。`map-tools` 把字典重新声明为 `Record<SpatialToolName, …>`，缺条目即 `tsc` 失败；`withPresentation` 在注册时拒绝未收录的工具；`tools/tests/presentation.spec.mjs` 断言字典键与目录完全一致。
 - 地图标签页浮层与工具行共用 `map-theme.ts`，样式读宿主 `--dsw-*` 设计 token，随宿主亮/暗主题切换。
 
-## 版本与证据
+### 版本与证据
 
 `SymbolStyle` 与 `FeatureOverrides` 的版本令牌（`sym-…@v1`、`ovr-…@v1`）由全字段摘要推导，记录不经新版本无法被编辑；分类权威仍在 `spatial-viz` 的 `StyleSpec`/`LegendSpec`。
 
@@ -63,8 +121,53 @@
 
 依赖方向：图层呈现沿 `map-container → map-layers → spatial-viz`，资源与制品读取沿 `map-container → spatial-catalog`。上游 `packages/` 从不导入本包；插件与其他插件一样经 loader 进入。
 
+</details>
+
+-----
+
+<a id="further-exploration"></a>
+## 进一步探索
+
+- [Map-container 绑定契约](../docs/map-container-binding.md) — 宿主/浏览器绑定、连续地图操作与来源路由。
+- [验证矩阵](../docs/verification-matrix.md) — 包检查与组合证据。
+- [Map-layers 契约](../layers/README.zh.md) — 本包折叠并渲染的呈现词汇。
+- [地图工具](../tools/README.zh.md) — 读取该状态的模型工具。
+- [观察采集升级说明](../../docs/upgrade-guide/v0.2.1-rc.3/map-observation-capture/guide.zh.md) — 观察记录变化。
+
+<a id="model-experience"></a>
+## 模型体验
+
+### 用户地图变更通知
+
+#### 请求上下文与条件
+
+浏览器变更路由接纳一个有界变更，并把一条 `map-user-change` 通知注入 live Agent 的 next-step 收件箱，不唤醒模型。只有当下一轮认领收件箱时，通知才到达模型；在此之前以清空收件箱的方式取消 Agent，会移除通知而地图保留该变更。摘要行使用用户语言；`userChangeNoticeText` 追加标记与记录 JSON。
+
+#### 模型看到的内容
+
+精确文本是摘要行、标记，再是独占一行的记录 JSON。标记标识记录词汇：`[map-user-change v2]` 用于普通图层、底图与状态变更；`[map-user-change v3]` 用于标记操作；`[map-user-change v4]` 用于已准备的 Wayback 比较；`[map-user-change v5]` 用于视觉候选决定；`[map-user-change v6 visual-change]` 用于视觉变化决定；`[map-user-change v7 imagery]` 用于影像显示；`[map-user-change v8 view]` 用于静止相机。`[map-user-change v1]` 仍可读取，但不能携带标记字段。记录携带 operation id、目标修订号与已接纳变更。
+
+#### Token 效果
+
+一条通知把摘要行、标记与至多 16 KiB 的有界记录加入下一轮读取的收件箱消息；它不替换此前 token。
+
+#### KV 缓存影响
+
+通知在收件箱认领时追加在 Session 已有的请求 token 之后，因此不改写此前 token。认领之前清空收件箱会移除该通知，而不是追加它。
+
+<a id="known-limitations-and-deferred-work"></a>
 ## 已知限制与延后工作
 
 - 用户变更在通知进入收件箱时生效。若在下一轮之前以清空收件箱的方式取消 agent，通知被移除，地图保留该变更但模型永远不会得知。
 - 面板编辑预设与单符号颜色；其它自由符号属性（线宽、虚线）仍经对话完成。
 - 标记几何接受 Point、LineString 与单环 Polygon；本版不编辑 GeoJSON Multi* 或多边形洞。
+
+<a id="dev-note"></a>
+### 开发备注
+
+<details>
+<summary>维护者工作上下文 — 点击展开</summary>
+
+保持投影折叠为会话日志的纯同步函数；每个新接受的 `map_*` 结果都需要其 meta 种类、折叠分支与 `tests/` 中的回放断言（`tests/projection.spec.mjs`）。工具卡片文案位于 `src/tool-cards/`，新增空间工具必须同时补条目。
+
+</details>

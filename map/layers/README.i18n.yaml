@@ -2,6 +2,42 @@
 # section, a hash of its English and Chinese blocks outside code blocks and generated regions.
 # After editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write map/layers/README.md
+/:
+  en: 5082cf565a5180e9
+  zh: 6a7faf2762b5a144
 /map-harness-map-layers:
-  en: cefab3f4cda4de61
-  zh: 707945b5e0d9e9e3
+  en: faa11b77e8c22435
+  zh: 4a18c7eec4015475
+/map-harness-map-layers/summary:
+  en: 7c4f4cec9bb1c0c3
+  zh: 312d32ba7c7a8fd7
+/map-harness-map-layers/table-of-contents:
+  en: d152484eb41ac6b4
+  zh: 725b47765ee8f30b
+/map-harness-map-layers/use-this-package:
+  en: bbff250eba0f1b89
+  zh: 0a618f05cc88ee2b
+/map-harness-map-layers/use-this-package/when-to-use-it:
+  en: 24f310cf2a3d6a46
+  zh: a12718d44b9b0a17
+/map-harness-map-layers/use-this-package/entry-point:
+  en: 28b7f50b934e1c1d
+  zh: 4b30e3ef0ec8ad0d
+/map-harness-map-layers/understand-the-implementation:
+  en: 8b8088f4a4380cae
+  zh: 320c23b044448d1f
+/map-harness-map-layers/further-exploration:
+  en: 27669c27654bc4a5
+  zh: 59dd1a03a27da8f1
+/map-harness-map-layers/model-experience:
+  en: 15c89a3369863960
+  zh: dc9b67e5641c3fe5
+/map-harness-map-layers/model-experience/kv-cache-effect:
+  en: a617322ab3e9e013
+  zh: a462ee61cc181431
+/map-harness-map-layers/known-limitations-and-deferred-work:
+  en: c7596866d221a988
+  zh: 153a3da2ea9e7f14
+/map-harness-map-layers/known-limitations-and-deferred-work/dev-note:
+  en: e67f633dc6fe7773
+  zh: 8ec3e73528ddb1a6

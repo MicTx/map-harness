@@ -1,6 +1,6 @@
 # 外部数据连接与在线空间检索
 
-English overview: see [../README.md](../README.md). `spatialConnect` 验证 PostGIS、对象存储和 COG 连接；独立的 `spatialSearch` 服务按需读取天地图数据，由 `catalog_register.online` 负责不可变登记，不做驻留同步。
+English page: see [../README.md](../README.md). `spatialConnect` 验证 PostGIS、对象存储和 COG 连接；独立的 `spatialSearch` 服务按需读取天地图数据，由 `catalog_register.online` 负责不可变登记，不做驻留同步；同一行还声明建筑足迹源 `footprints`，供 `map_refine_aoi` 用真实建筑轮廓细化 AOI（缺省为公共 OSM Overpass，`null` 关闭）。
 
 ## 1. 连接验证边界
 
@@ -50,7 +50,23 @@ English overview: see [../README.md](../README.md). `spatialConnect` 验证 Post
 
 请求路径由服务固定，模型不能提供 URL；跳转被拒绝，响应错误不回显供应商正文或 key。取消、超时、权限、限流、畸形数据、超量和未配置分别有 `SEARCH_*` 错误码。卸载先撤销服务再取消并等待在途请求，不能在关闭后继续发布数据。
 
-## 6. 检索验证与部署限制
+## 6. 建筑足迹源（`footprints`）
+
+`spatial-connect` 行的 `config.footprints` 声明供 `map_refine_aoi` 使用的建筑足迹读取面。省略该键时启用公共 OSM Overpass 端点并发出真实第三方请求；`footprints: null` 关闭，调用返回 `FOOTPRINTS_NOT_CONFIGURED`。map-web 档案只配置 `tianditu`，因此部署默认使用公共 Overpass，直到部署方显式声明私有端点或关闭。
+
+| 字段 | 默认值 | 范围或约束 |
+|---|---|---|
+| `baseUrl` | `https://overpass-api.de/api/interpreter` | HTTPS（HTTP 仅限字面回环）；无 userinfo、查询串或片段 |
+| `timeoutMs` | 45000 | 500–120000，单次尝试截止 |
+| `maxResponseBytes` | 8388608 | 1024–33554432，流式读取上限 |
+| `maxConcurrent` | 2 | 1–4，超限返回 `FOOTPRINTS_RATE_LIMITED` |
+| `maxRetries` | 1 | 0–2，仅 429/5xx/传输失败重试，4xx 不重试 |
+| `licence` | `ODbL 1.0 (OpenStreetMap contributors)` | 随结果携带；私有源可改名 |
+| `attribution` | `© OpenStreetMap contributors` | 随结果携带 |
+
+请求边界：bbox 跨度 ≤ 0.05°、可选 `building` 标签筛选（≤64 字符）、`limit` 1–500（默认 200）。只解码带 `building` 标签的闭合 way，多边形关系不重建并列入限制；返回 WGS84 Polygon FeatureCollection，返回元素数达到 `limit` 时如实置 `truncated`。错误以 `FOOTPRINTS_*` 具名（未配置、不可达、取消/已关闭、限流、超量、响应非法、源非法）；detail 与结果不携带端点凭据。该服务只读、不发布产物、不做驻留同步；`map_refine_aoi` 在无源或源失败时返回 `REFINE_SOURCE_UNAVAILABLE` 并保持候选不变。
+
+## 7. 检索验证与部署限制
 
 `node --test --experimental-strip-types map/tools/tests/online-discovery.spec.mjs` 使用真实回环 HTTP、目录与地图投影，覆盖参数/分页/几何/权限/超量/取消/关闭/不可变登记与重试。`node --test --test-name-pattern='^spatial workflow: online search' map/arcgis-mcp/tests/composition.e2e.mjs` 从真实 dsh map-web profile 与浏览器运行检索、登记、上图和恢复；模型与数据供应商为隔离替身。
 

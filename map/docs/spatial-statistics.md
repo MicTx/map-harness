@@ -1,6 +1,6 @@
 # 空间统计与时空模式层（spatial-statistics）
 
-P2 统计层把「密度表达」与「显著性检验」分开：版本化方法契约、种子置换检验、多重检验校正、缺测不插补与时间前推留出。模型只经 `stats_zonal`/`stats_autocorrelation`/`stats_hotspot`/`pattern_change`/`pattern_cluster`/`pattern_flow` 六个普通 MCP 工具消费它；设计依据见空间决策架构 §10.4（统计/模式工具）与 §12.2（统计科学约束）。本包是纯库：无 host 服务、无 profile 行，tools 直接 import；完整表格经 catalog 的发布配对落为不可变 artifact。
+统计层把「密度表达」与「显著性检验」分开：版本化方法契约（`p2-spatial-statistics@1`）、种子置换检验、多重检验校正、缺测不插补与时间前推留出。模型只经 `stat-analysis` 家族的六个工具消费它（名单见[能力索引](capability-index.md)）。本包是纯库：无 host 服务、无 profile 行，tools 直接 import；完整表格经 catalog 的发布配对落为不可变 artifact。
 
 ## 方法契约（`contract.ts`）
 
@@ -30,10 +30,10 @@ P2 统计层把「密度表达」与「显著性检验」分开：版本化方�
 
 ## 接入
 
-- 工具：`map/tools` 的 `stat-tools.ts` 解析 catalog 版本字节 → 解析 spec（默认值显式写入）→ 校验 → 经 `requirePendingPublish` 的已接受调用配对发布 artifact → 携带 `spatial-stat` meta；身份表六行 `family: 'stat-analysis'`、`metaKind: 'spatial-stat'`，与 `catalog_register`/`geo_buffer` 同列 `PUBLISH_TOOL_NAMES` 配对投影。
+- 工具：`map/tools` 的 `stat-tools.ts` 解析 catalog 版本字节 → 解析 spec（默认值显式写入）→ 校验 → 经 `requirePendingPublish` 的已接受调用配对发布 artifact → 携带 `spatial-stat` meta；身份归 `stat-analysis` 家族（见[能力索引](capability-index.md)），与 `catalog_register`/`geo_buffer` 同列 `PUBLISH_TOOL_NAMES` 配对投影。
 - 门禁归属见 [verification-matrix](verification-matrix.md) 的 `spatial-statistics/` owner 行。
 
 ## 限制
 
-- 本部署无工作区内成熟空间统计依赖（Turf 无自相关/热点检验；新增外部依赖需改根 lockfile，超出 map 层边界），交叉验证采用解析小样例 + 独立稠密实现 + 全枚举 + Cliff–Ord 闭式四路对照；接入外部统计 provider 属后续阶段（设计 §13.1）。
+- 本部署无工作区内成熟空间统计依赖（Turf 无自相关/热点检验；新增外部依赖需改根 lockfile，超出 map 层边界），交叉验证采用解析小样例 + 独立稠密实现 + 全枚举 + Cliff–Ord 闭式四路对照；接入外部统计 provider 不在本包范围。
 - 服务器大数据分块、栅格 zonal、稳定性的预测区间口径等在负载证据具备后引入；本包不实现预测、归因或因果。

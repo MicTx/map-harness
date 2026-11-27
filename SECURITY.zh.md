@@ -12,4 +12,4 @@ Map Harness 是实验性开发者预览软件。它可执行模型生成的代�
 
 ## 报告漏洞
 
-请私密报告漏洞——不要开公开 issue。通过仓库的私密漏洞报告渠道（仓库公开后的 GitHub Security Advisories）或维护者私密联系方式提交，并附复现步骤与受影响 commit id。报告尽力响应；无 SLA、无赏金计划。
+请私密报告漏洞——不要开公开 issue。通过仓库的私密漏洞报告渠道（公开快照仓库的 GitHub Security Advisories）或维护者私密联系方式提交，并附复现步骤与受影响 commit id。报告尽力响应；无 SLA、无赏金计划。

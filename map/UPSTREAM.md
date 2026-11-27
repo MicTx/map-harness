@@ -10,7 +10,7 @@ Map 层有一个根级安装策略例外：`pnpm-workspace.yaml` 的 `allowBuild
 
 ## 零冲突检查（导入前后各跑一次）
 
-上游文件区的允许差异是 `pnpm-workspace.yaml` 末尾追加的 `map/*` 三行注释 + glob、`packages/client/tsdown.client.ts` 的 CSS virtual-id 兼容补丁、`scripts/` 自有修改（`scripts/translation-pairing.ts` 的根级配对白名单、`scripts/gen-third-party-notices.ts` 的许可模板及其 spec 断言，含上游 MIT 全文保存节；`verify-dsh-package-licenses` 双文件与 `no-unknown-casts.baseline.json`——PolyForm 分家策略与 map 层存量 cast 基线属本仓库；`verify-repository-references.ts` 与 `verify-concrete-terms.ts` 的排除前缀加 `.spec/`、`map/`——私有任务包与自有层不是被巡查的上游维护面；`client-build-environment.ts` 的 `repositoryVersion` 尊重显式 `DSH_CLIENT_VERSION`（map 产品版本注入，见下方补丁表）——`rescope-vendor.ts` 的 GENERIC_SKIPS 增补 inspect 事件名、`cordis.patch.yml` 和 `loader-smoke.spec.mjs` 产品数据豁免），以及下方「需重放的上游补丁」登记的文件与根级自有门面文件。检查命令：
+上游文件区的允许差异是 `pnpm-workspace.yaml` 末尾追加的 `map/*` 三行注释 + glob、`packages/client/tsdown.client.ts` 的 CSS virtual-id 兼容补丁、`scripts/` 自有修改（`scripts/translation-pairing.ts` 的根级配对白名单、`scripts/gen-third-party-notices.ts` 的许可模板及其 spec 断言，含上游 MIT 全文保存节；`verify-dsh-package-licenses` 双文件与 `no-unknown-casts.baseline.json`——PolyForm 分家策略与 map 层存量 cast 基线属本仓库；`verify-repository-references.ts` 与 `verify-concrete-terms.ts` 的排除前缀加私有任务包目录与 `map/`——私有任务包与自有层不是被巡查的上游维护面；`client-build-environment.ts` 的 `repositoryVersion` 尊重显式 `DSH_CLIENT_VERSION`（map 产品版本注入，见下方补丁表）——`rescope-vendor.ts` 的 GENERIC_SKIPS 增补 inspect 事件名、`cordis.patch.yml` 和 `loader-smoke.spec.mjs` 产品数据豁免），以及下方「需重放的上游补丁」登记的文件与根级自有门面文件。检查命令：
 
 ```sh
 # 登记文件之外不能出现上游差异；登记文件内部仍须逐块审阅
@@ -67,7 +67,7 @@ git diff --name-only <upstream-base-commit> -- ':!map' ':!.spec' ':!.gitignore' 
 第二轮（import-drift 修复轮）：
 - **恢复 207 个滞留文件到 tag 原文**：其余 179 个包级 EN README、`apps/` 7 个（含 `apps/cli/README.i18n.yaml`）、`docs/` 4 个、`native/` 1 个、`python/sdk-runtime` 1 个、`.github/` 1 个、`vendor/` 5 个 vendor README——10-02 导入曾把 vendor/README.md preamble 换成 master 措辞并追加记录 22，与 tag 版 `rescope-vendor` 脚本的 exact edit 不再吻合，以及 `.agents/notes/` 的 README 与 8 个 i18n/确认记录（EN 与记录刷回 tag 后与 zh 侧天然一致）。
 - **补跟踪 5 个 snapshots fixture**：3 个 `.dsh/skills/**/SKILL.md`（根 `.gitignore` 未锚定的 `.dsh/` 误伤）、`app.local`（fixture 自带 `*.local` 规则，上游以 force-add 跟踪）、CJK 文件名 `说明.txt`；根 `.gitignore` 相应锚定 `/.dsh/`、`/.mapharness/`，补 `.dsh-build/` 与上游防护条目（`.p12`、`.env` 变体、`.storages/`、`.sessions/`）。
-- **三个门禁脚本自有分叉**（登记于零冲突白名单）：`verify-repository-references.ts`、`verify-concrete-terms.ts` 排除前缀加 `.spec/`、`map/`；`rescope-vendor.ts` 的 GENERIC_SKIPS 增补 inspect 事件名豁免。
+- **三个门禁脚本自有分叉**（登记于零冲突白名单）：`verify-repository-references.ts`、`verify-concrete-terms.ts` 排除前缀加私有任务包目录与 `map/`；`rescope-vendor.ts` 的 GENERIC_SKIPS 增补 inspect 事件名豁免。
 
 零冲突检查若以 2599fdcec2 为基线，会列出和解文件集与上述三个脚本；其内容等于上游 tag 原文或已登记的自有分叉，属本记录覆盖的和解类差异，下次全量导入后按新基线自然收敛。
 
@@ -107,7 +107,7 @@ git diff --name-only <upstream-base-commit> -- ':!map' ':!.spec' ':!.gitignore' 
    git checkout main && git pull
    git checkout -b spec/YYYY-MM-DD_update-upstream-<version>
    ```
-2. **导入新版本**：先保存「需重放的上游补丁」中的局部差异，再解压新版 deepseek-harness zip，覆盖上游文件区（**不覆盖** `map/`、`.spec/`、`.gitignore`、`pnpm-workspace.yaml`、根级自有门面文件集——`README.md`/`README.zh.md`/`README.i18n.yaml`、`CONTRIBUTING.*`、`CODE_OF_CONDUCT.*`、`SECURITY.*`、`SAFETY.*`、`LICENSE`、`THIRD_PARTY_NOTICES.md`、`package.json`、`scripts/translation-pairing.ts`、`scripts/gen-third-party-notices.ts`）。排除项必须以 `/` 锚定在解压根：rsync 无斜杠模式按文件名递归匹配任意层级，10-02 导入即因未锚定的 `README.md` 漏掉全部包级英文 README：
+2. **导入新版本**：先保存「需重放的上游补丁」中的局部差异，再解压新版 deepseek-harness zip，覆盖上游文件区（**不覆盖** `map/`、私有任务包目录、`.gitignore`、`pnpm-workspace.yaml`、根级自有门面文件集——`README.md`/`README.zh.md`/`README.i18n.yaml`、`CONTRIBUTING.*`、`CODE_OF_CONDUCT.*`、`SECURITY.*`、`SAFETY.*`、`LICENSE`、`THIRD_PARTY_NOTICES.md`、`package.json`、`scripts/translation-pairing.ts`、`scripts/gen-third-party-notices.ts`）。排除项必须以 `/` 锚定在解压根：rsync 无斜杠模式按文件名递归匹配任意层级，10-02 导入即因未锚定的 `README.md` 漏掉全部包级英文 README：
    ```sh
    rsync -a --exclude '.git' <new-extract>/ ~/dev/map-harness/ \
      --exclude '/map' --exclude '/.spec' --exclude '/.gitignore' \

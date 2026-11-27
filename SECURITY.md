@@ -12,4 +12,4 @@ Only the latest commit of `main` receives security fixes; developer-preview rele
 
 ## Reporting a vulnerability
 
-Report vulnerabilities privately — do not open a public issue. Contact the maintainer through the repository's private vulnerability reporting channel (GitHub Security Advisories once the repository is public) or the maintainer's private contact; include reproduction steps and affected commit ids. Reports receive a best-effort response; there is no SLA and no bounty program.
+Report vulnerabilities privately — do not open a public issue. Contact the maintainer through the repository's private vulnerability reporting channel (GitHub Security Advisories on the public snapshot repository) or the maintainer's private contact; include reproduction steps and affected commit ids. Reports receive a best-effort response; there is no SLA and no bounty program.

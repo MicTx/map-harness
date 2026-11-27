@@ -1,6 +1,6 @@
 # 空间性能容量与基准门禁（spatial-perf@2）
 
-本文是性能容量能力的现行契约：版本化 `spatial-perf@2` 方法、冻结 workload 与钉定 fixture 摘要、闭表分段测量词表、hard/estimated 分离的预算平面、同运行校准比值门与七条绝对门，以及 advisory 趋势/基线比较。设计依据：空间决策架构（§13.3 运行指标：分段耗时、峰值内存、Session/meta/投影字节、扫描量；「阈值在冻结测试集前由测量确定，文档不编造数字」）与审计结论（D10：「一次输入合法但累计地图超限必须在提交前拒绝」；「性能阈值用固定硬件/数据基准确定」）。
+本文是性能容量能力的现行契约：版本化 `spatial-perf@2` 方法、冻结 workload 与钉定 fixture 摘要、闭表分段测量词表、hard/estimated 分离的预算平面、同运行校准比值门与七条绝对门，以及 advisory 趋势/基线比较。性能阈值只由固定硬件与数据上的实测确定，文档不编造数字。
 
 ## 范围与不承诺
 
@@ -8,10 +8,10 @@
 
 **不做什么**：
 
-- 不承诺百万要素/大栅格/网络 workload：首期五 workload 对应设计 §13.3 的首期基准清单，对应 provider 落地后另设 gate。
+- 不承诺百万要素/大栅格/网络 workload：当前五个 workload 对应现行基准清单；对应 provider 落地后另设 gate。
 - 不测量浏览器帧渲染与真实 GUI 时延：`render` 段是 Node 侧显示派生（wire view 生成与校验）的成本；浏览器 paint 归 composition lane。
 - 不强制供应商费用：`PerfEstimatedCost` 只记录，任何 admission 路径都不接受它——估计项永远不会拒绝 hard 预算允许的操作。
-- 无测量证据不优化（spec §3.3）：本包只提供测量与门禁，不做没有基准依据的性能改动。
+- 无测量证据不优化：本包只提供测量与门禁，不做没有基准依据的性能改动。
 - Loader 启动时延归 Loader smoke lane，不在本包十门内。
 
 ## 冻结 workload
@@ -20,7 +20,7 @@
 
 ## 分段测量
 
-闭表词表（`PERF_SEGMENTS`）映射设计 §13.3 的测量点：`context` 请求装配/参数序列化、`mcp` 编解码、`compute` 领域计算（admit 步进、turf、候选校验、冷重放）、`commit` 接受调用阶梯（tool/call + 成功 tool/result 的折叠+落盘）与目录事务发布、`flush` 耐久 checkpoint barrier（`ctx.sessions.flush`，rig 挂载真实 JSONL 后端）、`render` 显示派生（wire view）、`scan` 有界数据搬运（字节回读、ref 列举）、`cancel` 取消请求→worker 静止。
+闭表词表（`PERF_SEGMENTS`）映射测量点：`context` 请求装配/参数序列化、`mcp` 编解码、`compute` 领域计算（admit 步进、turf、候选校验、冷重放）、`commit` 接受调用阶梯（tool/call + 成功 tool/result 的折叠+落盘）与目录事务发布、`flush` 耐久 checkpoint barrier（`ctx.sessions.flush`，rig 挂载真实 JSONL 后端）、`render` 显示派生（wire view）、`scan` 有界数据搬运（字节回读、ref 列举）、`cancel` 取消请求→worker 静止。
 
 - **标签不带载荷**：标签键来自闭表（workload/stage/unit），值 ≤64 字符；把结果文档、几何或错误文本当标签在采样器处响亮拒绝。
 - **失败不被吞**：抛错的被测函数先记录 `failed`（或标记后 `cancelled`）样本再原样重抛；采样器绝不把失败转成成功样本。
@@ -42,6 +42,6 @@ v2 的闭表校准词表只有 `compute-mix`。每个批次执行冻结的 JSON 
 
 ## 运行入口
 
-- **CI gate**：`map/spatial-perf/tests/benchmark-gate.spec.mjs`（`node map/bin/test.mjs` 聚合第 14 lane）——固定 workload 双次完整运行，逐门断言、逐重复配对与聚合摘要跨次逐位相等。
+- **CI gate**：`map/spatial-perf/tests/benchmark-gate.spec.mjs`（由 `node map/bin/test.mjs` 聚合执行）——固定 workload 双次完整运行，逐门断言、逐重复配对与聚合摘要跨次逐位相等。
 - **诊断**：`pnpm --filter @map-harness/spatial-perf run bench [--json <out.json>] [--baseline <report.json>]`——输出 workload、校准块、十门（含比值分子/分母）、advisory、趋势和 verdict，可选写入 v2 JSON。缺失、损坏、缺字段或异版本基线分别具名拒绝或标记不可比；不带前导 `--`。两条入口都是 plain Node（`--experimental-strip-types`），不经 TSX。
 - 基准经端口注入真实生产面（`tests/perf-rig.mjs`：真实 Session store + JSONL 持久后端 + 投影 registry、真实目录 store、真实 worker 子进程）；校准探针只依赖 Node 内建能力，src 零 map 依赖，sibling 包只在测试/诊断装配处经 src 相对导入。

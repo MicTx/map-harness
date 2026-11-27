@@ -1,6 +1,6 @@
 # ArcGIS MCP 协议与地图联动
 
-本文定义 map harness 内部 MCP provider（`@map-harness/arcgis-mcp`，服务名 `arcgisMcp`）的运行约束。该 provider 承载 map 层全部 72 个模型可见空间工具，覆盖地图状态与底图、连续地图操作、双时相视觉比较、Turf 分析、数据链、空间上下文、可达性 run、统计/模式、决策模型、可视化、协同、地形、流工作台与规模通道；`arcgis-mcp` 这个包名与服务名是历史标识，目录本身已由 `@map-harness/map-tools` 的统一身份表（`src/spatial-catalog.ts`）固定。MCP 负责标准协议和执行绑定，`mapContainer` session projection 是唯一权威地图状态（P0a 起 handler 不再写注册表），ArcGIS Maps SDK for JavaScript occurrence 只负责渲染；任何一层都不得建立第二份地图真源。
+本文定义 map harness 内部 MCP provider（`@map-harness/arcgis-mcp`，服务名 `arcgisMcp`）的运行约束。该 provider 承载 map 层全部 74 个模型可见空间工具，覆盖地图状态与底图、连续地图操作、双时相视觉比较、Turf 分析、数据链、空间上下文、可达性 run、统计/模式、决策模型、可视化、协同、地形、流工作台与规模通道；`arcgis-mcp` 这个包名与服务名是历史标识，目录本身已由 `@map-harness/map-tools` 的统一身份表（`src/spatial-catalog.ts`）固定。MCP 负责标准协议和执行绑定，`mapContainer` session projection 是唯一权威地图状态（handler 只返回候选，不写注册表），ArcGIS Maps SDK for JavaScript occurrence 只负责渲染；任何一层都不得建立第二份地图真源。
 
 ## 调用链
 
@@ -30,7 +30,7 @@ adapter 把 `ToolExecution.signal` 传给 MCP client request。MCP handler 同�
 
 ## 工具目录
 
-MCP server 暴露固定 72 个名称（完整名单以 `SPATIAL_MCP_TOOL_NAMES` 为准），保持 map-analyst 的模型词汇稳定；public ToolRuntime 名与 raw MCP 名一致（内部 provider 是这些名字的唯一权威，无需 server 限定前缀）。统一身份表 `SPATIAL_TOOL_CATALOG`（`map/tools/src/spatial-catalog.ts`）逐工具记录 name、family、owner、provider、durable meta kind 与 schema 版本；provider 的 tools/list 冻结、agent 侧 adapter 与最终模型 assemble 都对照同一张表，未知/重复/缺失名在定义期抛错。server dispatch 到 `map/tools` 已导出的 ToolDefinition handler，不复制文件读取、坐标校验、来源准入、reducer 或结果语义；tools/list schema 与 direct definitions 由 parity 测试锁定（全部 72 个工具全覆盖），目录一致性与文档覆盖由 [capability-index](capability-index.md) 门禁锁定。
+MCP server 暴露固定 74 个名称（完整名单以 `SPATIAL_MCP_TOOL_NAMES` 为准），保持 map-analyst 的模型词汇稳定；public ToolRuntime 名与 raw MCP 名一致（内部 provider 是这些名字的唯一权威，无需 server 限定前缀）。统一身份表 `SPATIAL_TOOL_CATALOG`（`map/tools/src/spatial-catalog.ts`）逐工具记录 name、family、owner、provider、durable meta kind 与 schema 版本；provider 的 tools/list 冻结、agent 侧 adapter 与最终模型 assemble 都对照同一张表，未知/重复/缺失名在定义期抛错。server dispatch 到 `map/tools` 已导出的 ToolDefinition handler，不复制文件读取、坐标校验、来源准入、reducer 或结果语义；tools/list schema 与 direct definitions 由 parity 测试锁定（全部 74 个工具全覆盖），目录一致性与文档覆盖由 [capability-index](capability-index.md) 门禁锁定。
 
 MCP参数说明由`arcgis-mcp/src/catalog.ts`声明，不会自动继承direct工具的参数描述。`map_use`的action独占字段和finish-only reason说明在两处保持一致，由`arcgis-mcp.spec.mjs`逐字段对照；运行时互斥校验仍归工具解析器，说明文字不能代替拒绝规则。
 
@@ -44,17 +44,17 @@ MCP参数说明由`arcgis-mcp/src/catalog.ts`声明，不会自动继承direct�
 | `map_draw` | 图层摘要、bbox、图层总数 | 版本化 `map-change`（`add-layer` 候选，点/线/面由显式 WGS84 坐标构造，多边形自动闭合） |
 | `map_edit_annotation` | 目标修订、操作 id、可选要素 id | 版本化 `map-agent-annotation` 记录 Agent 对标注的更新、删除、样式、排序、撤销及视觉候选应用或排除；保留原作者，不伪称用户确认 |
 | `map_locate` | query、provider、crs、candidates、found、limitations | 无，只读在线地名解析；登记数据归 `catalog_register.online` |
-| `map_observe` | revision、view_id、image(attachment)、note | 无；PNG 经附件服务持久化入结果图像块——仅视觉模型通过门控后才提交捕获 |
+| `map_observe` | revision、view_id、image(attachment)、note | 版本化 `map-observation` meta：v1–v3 固定来源记录，v4 另携带读图子会话的 `visualAnalysis`（provider/model/childSessionId）；PNG 经附件服务持久化入结果图像块——仅视觉模型通过门控后才提交捕获 |
 | `map_compare_views` | before/after 两图、`comparison_id`、固定 release、限制 | 版本化 `map-visual-comparison` meta v2 进入 `tool/result.meta`；只读两份已保存附件，不重拍、不请求第二模型、不写图层 revision |
-| `map_markup` | observation_id、purpose、候选 id、几何、限制 | 版本化 `visual-proposals` meta v1 进入 `tool/result.meta`；候选绑定本会话最新观察与可信 call/model identity，由同一 affine 把点/线/面/bbox 四角转 WGS84；Agent 可用 `map_edit_annotation` 应用或排除候选 |
-| `map_refine_aoi` | candidate_id 或 bbox、可选 building 过滤、limit、layer_id、name、confidence | 版本化 `map-change`：`add-layer` 候选，图层为真实建筑足迹（OSM Overpass，ODbL，署名随结果），每个要素带 source/licence/attribution/selection（含候选质心→重叠比排序）与 `refines` 替换链接；原矩形候选保留不动、结果中列为 superseded；来源不可达/无数据/4xx 分别为 REFINE_SOURCE_UNAVAILABLE / REFINE_NO_FOOTPRINTS / REFINE_SOURCE_INVALID，候选原样保留；确认仍归用户 |
+| `map_markup` | observation_id、purpose、候选 id、几何、限制 | 版本化 `map-visual-proposal` meta v1 进入 `tool/result.meta`；候选绑定本会话最新观察与可信 call/model identity，由同一 affine 把点/线/面/bbox 四角转 WGS84；Agent 可用 `map_edit_annotation` 应用或排除候选 |
+| `map_refine_aoi` | candidate_id 或 bbox、可选 building 过滤、limit、layer_id、name、confidence | 版本化 `map-change`：`add-layer` 候选，图层为真实建筑足迹（OSM Overpass，ODbL，署名随结果）；每个要素带 `rank`/`containsCentroid`/`overlapRatio`，被替换的候选在要素上带 `refines`；结果带逐足迹 `selection`（`rank`/`contains_centroid`/`overlap_ratio`）与 `source` 记录（`provider`/`licence`/`attribution`/`retrieved_at`）；原矩形候选保留不动、结果中列为 superseded；来源不可达/无数据/4xx 分别为 REFINE_SOURCE_UNAVAILABLE / REFINE_NO_FOOTPRINTS / REFINE_SOURCE_INVALID，候选原样保留；确认仍归用户 |
 | `map_mark_changes` | comparison_id、变化候选 id、几何、限制 | 版本化 `map-visual-change` meta v2 进入 `tool/result.meta`；候选绑定已保存双图与共同 affine，Agent 可用 `map_edit_annotation` 应用或排除候选 |
 | `map_use` | action、observation_id、center/zoom 或 SDK hits、budget、must_observe | `map-use` v1 接受记录先核对控制权，再将pan/zoom降低为`set-view`、保存click选择或结束控制。每 turn 默认不限次数与耗时，用户接管优先 |
 | `map_set_mode` | `map` 或 `scene` | 版本化 `map-change`（`set-mode` 候选） |
 | `map_list_basemaps` | 可用基础来源、兼容注记与不可用原因 | 无，只读部署目录 |
-| `map_set_basemap` | 来源/注记标题、修订号与变更摘要 | 版本化 `map-change` v7（`set-basemap` 候选；工具层完成目录、兼容性与修订检查） |
+| `map_set_basemap` | 来源/注记标题、修订号与变更摘要 | 版本化 `map-change` v8（`set-basemap` 候选；工具层完成目录、兼容性与修订检查） |
 | `map_set_imagery` | 影像显示状态（标注/近期/早期可见性与不透明度、固定 release）、目标修订号 | 版本化 `map-change`（`set-imagery-display` 候选；`target_revision` 是提案而非渲染成功声明） |
-| `geo_buffer` | 距离、面积、bbox、消费要素索引、status、limitations | 版本化 `analysis-result`（`schemaVersion: 1`）：工具、实际 selector（path/crs/featureIndex）、方法参数、带单位 metrics 与 limitations；序列化上限 64 KiB |
+| `geo_buffer` | 距离、面积、bbox、消费要素索引、status、limitations | 版本化 `analysis-result`（`schemaVersion: 2`）：工具、实际 selector（path/crs/featureIndex）、方法参数、带单位 metrics 与 limitations；序列化上限 64 KiB |
 | `geo_area` | 面积、bbox、feature_index、status、limitations | 同上（`turf-area`） |
 | `geo_intersect` | 是否相交、重叠面积、bbox、双侧要素索引、status、limitations | 同上（`turf-intersect`，双输入 selector） |
 | `geo_distance` | km/m 距离、双侧要素索引、status、limitations | 同上（`turf-distance`，双输入 selector） |
@@ -71,16 +71,18 @@ MCP参数说明由`arcgis-mcp/src/catalog.ts`声明，不会自动继承direct�
 
 ### 其余家族速览
 
-主表之外 39 个已注册工具的索引行（name、family、durable meta）；各家族的参数与结果细节见对应家族文档（[map-layers.md](map-layers.md)、[storage-lifecycle.md](storage-lifecycle.md)、[spatial-statistics.md](spatial-statistics.md)、[spatial-decision.md](spatial-decision.md)、[spatial-terrain.md](spatial-terrain.md)、[spatial-realtime.md](spatial-realtime.md)、[spatial-scale.md](spatial-scale.md)、[spatial-collab.md](spatial-collab.md)）。
+主表之外 41 个已注册工具的索引行（name、family、durable meta）；各家族的参数与结果细节见对应家族文档（[map-layers.md](map-layers.md)、[storage-lifecycle.md](storage-lifecycle.md)、[spatial-statistics.md](spatial-statistics.md)、[spatial-decision-models.md](spatial-decision-models.md)、[spatial-terrain.md](spatial-terrain.md)、[spatial-realtime.md](spatial-realtime.md)、[spatial-scale.md](spatial-scale.md)、[spatial-collab.md](spatial-collab.md)）。
 
 | 工具 | family | durable meta |
 |---|---|---|
 | `map_save` | map-save | `map-save-receipt` v1 |
+| `catalog_register` | catalog-write | `catalog-result` v1 |
 | `data_import` | catalog-data | `catalog-result` v1 |
 | `data_export` | catalog-data | `data-export` v1 |
 | `layer_set_state` / `layer_set_style` | layer-write | `map-change` v8 |
 | `decision_update` | decision-write | `decision-change` v1 |
 | `map_apply_patch` / `map_undo` | collab-write | `map-change` v8 |
+| `run_submit` | run-submit | `accessibility-run` v1 |
 | `run_get` | run-read | `accessibility-run` v1 |
 | `run_cancel` | run-cancel | `accessibility-run` v1 |
 | `stats_zonal` / `stats_autocorrelation` / `stats_hotspot` | stat-analysis | `spatial-stat` v1 |
@@ -98,7 +100,7 @@ MCP参数说明由`arcgis-mcp/src/catalog.ts`声明，不会自动继承direct�
 | `scale_read` | scale-read | `spatial-scale` v1 |
 | `scale_scan` | scale-scan | `spatial-scale` v1 |
 
-`map-analyst` 只注册 MCP-backed 的同名空间工具；direct definitions 保留为测试和兼容入口，但不能在同一 agent scope 重复注册。`@map-harness/map-tools/mcp` 入口在注册这些工具之外还登记一条单调 ToolRuntime guard：`exec.parent` 存在的嵌套 dispatch 调用 `map-mutation`/`catalog-write`/`map-save`/`run-submit`/`run-cancel` 家族工具时在 pipeline 层拒绝（handler 内的同一拒绝保持不变，geo 只读分析不受影响——嵌套 geo 调用不产生 presentationMeta）。该入口在 host provider 缺失时直接报错。旧用户目录可能仍保存 root `@map-harness/map-tools` 行，因此 root 入口在发现 host `arcgisMcp` 服务时把全部空间工具解析为同一 MCP definitions；未挂 provider 的其他 composition 继续使用 direct definitions（geo direct 定义与 MCP 路径产出同一 canonical value）。
+`map-analyst` 只注册 MCP-backed 的同名空间工具；direct definitions 保留为测试和兼容入口，但不能在同一 agent scope 重复注册。`@map-harness/map-tools/mcp` 入口在注册这些工具之外还登记一条单调 ToolRuntime guard：`exec.parent` 存在的嵌套 dispatch 只允许 `spatial-catalog.ts` 中 `supportsNestedDispatch` 为真的 family（只读与分析家族）；`NATIVE_ONLY_FAMILIES` 的 17 个副作用 family 在 pipeline 层拒绝（handler 内的同一拒绝保持不变），嵌套 geo 只读调用不产生 presentationMeta。该入口在 host provider 缺失时直接报错。旧用户目录可能仍保存 root `@map-harness/map-tools` 行，因此 root 入口在发现 host `arcgisMcp` 服务时把全部空间工具解析为同一 MCP definitions；未挂 provider 的其他 composition 继续使用 direct definitions（geo direct 定义与 MCP 路径产出同一 canonical value）。
 
 ## 结果与重放
 
@@ -108,21 +110,13 @@ MCP result 的 `content` 是模型可见文本，`structuredContent` 保留结�
 
 状态改变的提交点是 Session 接受了携带 `map-change` meta 的成功 `tool/result` 并由投影折叠；handler 返回本身只是待接受候选，`ctx.map` 无写路径。工具不得把这个结果表述为浏览器像素已经渲染；已挂载 occurrence 通过 projection 订阅在同一页面内更新，未挂载 occurrence 在稍后打开时读取相同 projection。
 
+状态改变只在 Session 接受成功结果并折叠版本化 metadata 后成立；未知工具、schema error、文件/坐标校验失败、缺 map service、缺已接受 `tool/call` 配对和取消都返回 error 且不改权威地图。
+
 `mapContainer` 按 pending `tool/call`（callId + callSeq）配对每个 map mutation 的 call/result，允许同一步存在多个在途地图调用。折叠准入：成功、配对（meta 的 `sourceCallSeq` 等于 pending callSeq，事件 `sourceEventSeqs` 引用一致）、首次结算（surface replacement 不会再应用）、`targetRevision` 匹配当前 revision、容量合规；error、取消、未配对、未知 schemaVersion/kind、过期 revision 与超限只产生有界只读诊断。task-required 工具在 map 层定义生成期即拒绝；嵌套（`exec.parent` 存在的 PTC 子 dispatch）在 handler 拒绝；map-web profile 启用 native executor 并禁用 PTC executor 与 PTC preset。右栏和 conversation Map 使用同一 projection，但拥有不同 occurrence key 和 ArcGIS 实例。
 
 ## 真实视觉验收
 
 真实视觉验收使用`MAP_USE_LIVE=1 node --test --test-name-pattern='map use live:' map/arcgis-mcp/tests/composition.e2e.mjs`，需要单独授权调用真实模型；默认不执行。它经真实Loader/Native/MCP/ArcGIS链运行五个预登记合成布局、空白图消融、用户停止和低动作预算，通过仅记录的代理核对观察PNG与供应商文件上传/消息引用的哈希，保存上游请求身份、用量和全部结果。模型只获准使用`map_observe`与`map_use`，场景几何不放入可访问工作区。`MAP_USE_LIVE_CASES`只供诊断选择1–8号场景，不能把子集称为完整验收；`MAP_USE_LIVE_KEY_SOURCE=project-env`显式选用项目`.env`凭据而非继承环境，不修改全局配置。真实模型表现与确定性`map use:`矩阵分开报告。
-
-## 对标取舍
-
-| 来源 | 采用 | 拒绝 |
-|---|---|---|
-| `AI-Map`（Vue + Cesium） | 解析动作后经能力层执行并返回结构化结果 | 名为 `MCPServer` 的 regex 意图路由不是 MCP；不复制 Cesium 对象或多条重叠执行路径 |
-| `AIxMap`（React + MapLibre） | tool registry、引擎无关 capability facade、工具结果回灌、状态改变后刷新、start/success/error 生命周期 | prompt-JSON 伪 function calling、provider 请求漏 `tools`、浏览器内存真源、post-process 失败仍报成功、UI-only abort |
-| map harness | session event、projection、ToolRuntime lifecycle、ArcGIS occurrence | 不新增浏览器 command queue、第二个 layer store 或模型可控 session identity |
-
-AIxMap 的 `changesMapState` 静态工具名集合不作为判断依据。map harness 只在 Session 接受成功结果并折叠版本化 metadata 后认定状态改变；未知工具、schema error、文件/坐标校验失败、缺 map service、缺已接受 `tool/call` 配对和取消都返回 error 且不改权威地图。
 
 ## 错误码与结果语义
 
