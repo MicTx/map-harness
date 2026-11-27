@@ -31,7 +31,7 @@ import { PUBLIC_FACADE } from './release-content.mjs'
 import { forceWithLease, readProductVersion } from './public-release-privacy.mjs'
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..')
-const GITHUB = 'https://github.com/MicTx/map-harness-public.git'
+const GITHUB = 'https://github.com/MicTx/map-harness.git'
 const GIT_OUTPUT_BYTES = 16 * 1024 * 1024
 /**
  * The public-tree checks run against the verification copy, in order. The

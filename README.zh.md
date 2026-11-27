@@ -64,7 +64,7 @@ Web UI 默认在 `http://127.0.0.1:6425` 启动并打开默认浏览器（`--no-
 
 ## 参与贡献
 
-欢迎在 [issue 区](https://github.com/MicTx/map-harness-public/issues)报告问题与观察；暂不接受外部 pull request。另见 [CONTRIBUTING.zh.md](CONTRIBUTING.zh.md)、[行为准则](CODE_OF_CONDUCT.zh.md)，私下报告安全漏洞见 [SECURITY.zh.md](SECURITY.zh.md)。
+欢迎在 [issue 区](https://github.com/MicTx/map-harness/issues)报告问题与观察；暂不接受外部 pull request。另见 [CONTRIBUTING.zh.md](CONTRIBUTING.zh.md)、[行为准则](CODE_OF_CONDUCT.zh.md)，私下报告安全漏洞见 [SECURITY.zh.md](SECURITY.zh.md)。
 
 ## 许可证
 

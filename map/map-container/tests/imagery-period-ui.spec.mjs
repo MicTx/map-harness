@@ -4,6 +4,7 @@ import { createRequire } from 'node:module'
 import { JSDOM } from 'jsdom'
 import React from 'react'
 import { tsImport } from 'tsx/esm/api'
+import { OLD_RELEASE, catalogBody, catalogHarness, catalogResponse } from './wayback-panel-fixture.mjs'
 
 const { createElement, act } = React
 globalThis.React = React
@@ -67,15 +68,6 @@ const early = waybackDescriptor({
   layerIdentifier: 'WB_2014_R01',
   acquiredAt: null,
 })
-const release = {
-  releaseId: 10,
-  itemId: '903f0abe9c3b452dafe1ca5b8dd858b9',
-  title: 'World Imagery (Wayback 2014-02-20)',
-  publishedAt: '2014-02-20',
-  layerIdentifier: 'WB_2014_R01',
-  acquiredAt: null,
-}
-
 const display = overrides => ({
   labelsVisible: true,
   recentVisible: true,
@@ -100,7 +92,7 @@ function wire() {
   }
 }
 
-const propsOf = submitted => ({
+const propsOf = (submitted, extra = {}) => ({
   wire: wire(),
   sessionId: 'session-1',
   occurrenceKey: 'imagery',
@@ -110,6 +102,7 @@ const propsOf = submitted => ({
   changeSubmit: async input => { submitted.push(input); return { ok: true, revision: input.revision + 1 } },
   panelSubmit: undefined,
   imageUrl: () => '',
+  ...extra,
 })
 
 const click = element => act(() => { element.dispatchEvent(new globalThis.MouseEvent('click', { bubbles: true })) })
@@ -123,6 +116,13 @@ const closeDialog = async dom => {
   const close = dom.window.document.querySelector(`[role="dialog"] button[aria-label="${t('panel.dialogClose')}"]`)
   await click(close)
   await flush()
+}
+/** Wait in real time for an owner fetch or response body to settle inside the tree. */
+const eventually = async (predicate, message) => {
+  for (let attempt = 0; attempt < 100 && !predicate(); attempt += 1) {
+    await act(async () => { await new Promise(resolve => setTimeout(resolve, 5)) })
+  }
+  assert.ok(predicate(), message)
 }
 const selectRelease = async (dom, value) => {
   const select = dom.window.document.querySelector('[data-map-wayback-release]')
@@ -162,80 +162,170 @@ test('imagery rows preserve default visibility and current source selections', a
   assert.equal(submitted.at(-1).change.display.labelsVisible, false)
 })
 
-test('the early dialog selects a fixed release from catalog without local discovery', async tContext => {
-  const dom = installDom(tContext)
-  const submitted = []
-  const requests = []
+/** Open the early dialog and let the warmed catalog reach the selector. */
+const openEarly = async container => {
+  await openDialog(container, 'early')
+  await flush()
+  await new Promise(resolve => setImmediate(resolve))
+  await flush()
+  await flush()
+}
+
+/** Admit through the same-origin route; any other same-origin request fails the test. */
+function admitRoute(tContext, ...replies) {
   const previousFetch = globalThis.fetch
-  globalThis.fetch = async input => {
-    requests.push(String(input))
-    return Response.json({
-      schemaVersion: 1,
-      releases: [{ ...release, descriptor: early }],
-      nextCursor: null,
-    })
+  const requests = []
+  const queue = [...replies]
+  globalThis.fetch = async (input, init) => {
+    const url = new URL(typeof input === 'string' ? input : input instanceof URL ? input.href : input.url, 'http://owner.test')
+    requests.push({ url, init })
+
+    if (url.pathname !== '/api/map/wayback/admit') throw new Error(`unexpected same-origin request ${url.pathname}`)
+    const reply = queue.shift()
+    return typeof reply === 'function' ? reply(init) : Response.json(reply ?? early)
   }
   tContext.after(() => { globalThis.fetch = previousFetch })
+  return requests
+}
+
+test('the early dialog lists the warmed owner catalog and commits the admitted release without local discovery', async tContext => {
+  const dom = installDom(tContext)
+  const submitted = []
+  const requests = admitRoute(tContext)
+  const harness = catalogHarness(catalogResponse(catalogBody([10, '2014-02-20', 'a'])))
+  tContext.after(() => harness.owner.dispose())
   const root = createRoot(dom.container)
   dom.roots.push(root)
   await act(async () => {
-    root.render(createElement(ImageryResourcePanel, { ...propsOf(submitted), open: true }))
+    root.render(createElement(ImageryResourcePanel, { ...propsOf(submitted, { waybackCatalog: harness.owner }), open: true }))
   })
-  await openDialog(dom.container, 'early')
-  await act(async () => { await new Promise(resolve => setImmediate(resolve)) })
-  assert.ok(requests.every(url => url.includes('operation=catalog')), requests.join('\n'))
-  assert.ok(requests.every(url => !url.includes('operation=local') && !url.includes('operation=coverage') && !url.includes('operation=metadata')))
+  await openEarly(dom.container)
+  await new Promise(resolve => setImmediate(resolve))
+  await flush()
+  assert.equal(harness.calls.length, 1, 'the catalog is warmed once the panel mounts')
+  assert.equal(requests.length, 0, 'opening the dialog admits nothing')
+  const select = dom.window.document.querySelector('[data-map-wayback-release]')
+  assert.deepEqual([...select.options].map(option => option.value), ['', '10'])
   await selectRelease(dom, '10')
+  assert.equal(requests.length, 1)
+  assert.equal(requests[0].init.method, 'POST')
+  assert.deepEqual(JSON.parse(requests[0].init.body), {
+    sessionId: 'session-1',
+    release: { releaseId: 10, itemId: OLD_RELEASE.itemId, publishedAt: '2014-02-20', layerIdentifier: 'WB_2014_R01' },
+  })
   assert.equal(submitted.at(-1).change.op, 'set-imagery-display')
   assert.equal(submitted.at(-1).change.display.earlyVisible, true)
-  assert.equal(submitted.at(-1).change.display.earlySource.release.version, '10')
+  assert.deepEqual(submitted.at(-1).change.display.earlySource, early)
   assert.equal(submitted.at(-1).change.display.recentOpacity, 0.5)
 })
 
-test('early selection, reopening, and clearing preserve deliberate recent imagery choices', async tContext => {
+test('selection stays pending and disabled during verification, then commits with the click-time revision and display', async tContext => {
   const dom = installDom(tContext)
   const submitted = []
-  const previousFetch = globalThis.fetch
-  globalThis.fetch = async () => Response.json({ schemaVersion: 1, releases: [{ ...release, descriptor: early }], nextCursor: null })
-  tContext.after(() => { globalThis.fetch = previousFetch })
+  let finishAdmission
+  admitRoute(tContext, () => new Promise(resolve => { finishAdmission = resolve }))
+  const harness = catalogHarness(catalogResponse(catalogBody([10, '2014-02-20', 'a'], [50, '2025-10-29', 'd'])))
+  tContext.after(() => harness.owner.dispose())
   const root = createRoot(dom.container)
   dom.roots.push(root)
-  const render = async imageryDisplay => {
-    const props = propsOf(submitted)
-    await act(async () => root.render(createElement(ImageryResourcePanel, {
-      ...props, open: true, wire: { ...props.wire, imageryDisplay },
-    })))
-    await flush()
-  }
-
-  await render(display({ recentOpacity: 0.3 }))
-  await openDialog(dom.container, 'early')
+  const props = propsOf(submitted, { waybackCatalog: harness.owner })
+  await act(async () => { root.render(createElement(ImageryResourcePanel, { ...props, open: true })) })
+  await openEarly(dom.container)
+  const document = dom.window.document
+  const select = document.querySelector('[data-map-wayback-release]')
+  await eventually(() => !select.disabled, 'the warmed catalog enables the selector')
   await selectRelease(dom, '10')
-  assert.equal(submitted.at(-1).change.display.recentOpacity, 0.3)
-
-  await render(display({ recentVisible: false }))
-  await selectRelease(dom, '10')
-  assert.equal(submitted.at(-1).change.display.recentVisible, false)
-  assert.equal(submitted.at(-1).change.display.recentOpacity, 1)
-
-  await render(display({ earlySource: early, earlyVisible: true, recentOpacity: 0.4 }))
-  await selectRelease(dom, '')
-  assert.deepEqual(submitted.at(-1).change.display, display({ recentOpacity: 0.4 }))
-  await closeDialog(dom)
-
-  for (const [recentVisible, recentOpacity, expectedOpacity] of [[true, 1, 0.5], [true, 0.25, 0.25], [false, 1, 1]]) {
-    await render(display({ earlySource: early, recentVisible, recentOpacity }))
-    await click(rowOf(dom.container, 'early').querySelector('[data-map-panel-eye]'))
-    await flush()
-    assert.deepEqual(submitted.at(-1).change.display, display({
-      earlySource: early, earlyVisible: true, recentVisible, recentOpacity: expectedOpacity,
-    }))
-  }
-
-  await render(display({ earlySource: early, earlyVisible: true, recentOpacity: 0.7 }))
-  await click(rowOf(dom.container, 'early').querySelector('[data-map-panel-eye]'))
+  assert.equal(submitted.length, 0, 'nothing is committed before admission')
+  assert.equal(select.disabled, true)
+  assert.equal(select.value, '10')
+  assert.equal(document.querySelector('[data-map-imagery-row][data-imagery-kind="early"] [data-map-panel-eye]').disabled, true)
+  // Another actor advances the Session while the verification is pending.
+  await act(async () => { root.render(createElement(ImageryResourcePanel, { ...props, open: true, wire: { ...props.wire, revision: 7 } })) })
+  await act(async () => { finishAdmission(Response.json(early)) })
   await flush()
-  assert.deepEqual(submitted.at(-1).change.display, display({ earlySource: early, recentOpacity: 0.7 }))
+  assert.equal(submitted.length, 1)
+  assert.equal(submitted[0].revision, 0, 'the commit targets the revision read at click time')
+  // One atomic blend: the admitted release and the reduced recent opacity travel in one change.
+  assert.deepEqual(submitted[0].change.display, display({ earlySource: early, earlyVisible: true, recentOpacity: 0.5 }))
+  assert.equal(select.disabled, false)
+  assert.equal(document.querySelector('[data-map-wayback-failure]'), null)
+})
+
+test('a refused admission reports inline, keeps the selection, and releases the panel', async tContext => {
+  const dom = installDom(tContext)
+  const submitted = []
+  const requests = admitRoute(tContext, () => Response.json({ ok: false, code: 'SOURCE_CHANGED' }, { status: 409 }))
+  const harness = catalogHarness(catalogResponse(catalogBody([10, '2014-02-20', 'a'])))
+  tContext.after(() => harness.owner.dispose())
+  const root = createRoot(dom.container)
+  dom.roots.push(root)
+  await act(async () => {
+    root.render(createElement(ImageryResourcePanel, { ...propsOf(submitted, { waybackCatalog: harness.owner }), open: true }))
+  })
+  await openEarly(dom.container)
+  await eventually(() => !dom.window.document.querySelector('[data-map-wayback-release]')?.disabled, 'the warmed catalog enables the selector')
+  await selectRelease(dom, '10')
+  await eventually(() => dom.window.document.querySelector('[data-map-wayback-failure]') !== null, 'the refusal is reported inline')
+  assert.equal(requests.length, 1)
+  assert.equal(submitted.length, 0)
+  const failure = dom.window.document.querySelector('[data-map-wayback-failure]')
+  assert.ok(failure)
+  assert.match(failure.textContent, /changed/)
+  assert.equal(dom.window.document.querySelector('[data-map-wayback-release]').value, '')
+  // The panel is writable again: hiding labels submits normally.
+  await click(rowOf(dom.container, 'labels').querySelector('[data-map-panel-eye]'))
+  await flush()
+  assert.equal(submitted.length, 1)
+  assert.equal(submitted[0].change.display.labelsVisible, false)
+})
+
+test('closing the early dialog during verification never submits the late result', async tContext => {
+  const dom = installDom(tContext)
+  const submitted = []
+  let finishAdmission
+  admitRoute(tContext, () => new Promise(resolve => { finishAdmission = resolve }))
+  const harness = catalogHarness(catalogResponse(catalogBody([10, '2014-02-20', 'a'])))
+  tContext.after(() => harness.owner.dispose())
+  const root = createRoot(dom.container)
+  dom.roots.push(root)
+  await act(async () => {
+    root.render(createElement(ImageryResourcePanel, { ...propsOf(submitted, { waybackCatalog: harness.owner }), open: true }))
+  })
+  await openEarly(dom.container)
+  await eventually(() => !dom.window.document.querySelector('[data-map-wayback-release]')?.disabled, 'the warmed catalog enables the selector')
+  await selectRelease(dom, '10')
+  await eventually(() => typeof finishAdmission === 'function', 'the choice reaches the admission route')
+  await closeDialog(dom)
+  await act(async () => { finishAdmission(Response.json(early)) })
+  await flush()
+  // The early eye still waits for a release; another row proves the panel is writable again.
+  await eventually(() => dom.window.document.querySelector('[data-map-imagery-row][data-imagery-kind="labels"] [data-map-panel-eye]').disabled === false, 'closing releases the panel')
+  assert.equal(submitted.length, 0)
+  assert.equal(dom.window.document.querySelector('[data-map-wayback-release]'), null, 'the dialog stays closed')
+})
+
+test('the early selector stays disabled when the deployment policy withholds Wayback', async tContext => {
+  const dom = installDom(tContext)
+  const submitted = []
+  const requests = admitRoute(tContext)
+  const harness = catalogHarness(catalogResponse(catalogBody([10, '2014-02-20', 'a'])))
+  tContext.after(() => harness.owner.dispose())
+  const root = createRoot(dom.container)
+  dom.roots.push(root)
+  const sources = page.sources.map(source => source.id === 'esri-wayback'
+    ? { ...source, availability: { kind: 'unavailable', reason: 'disabled' } }
+    : source)
+  await act(async () => {
+    root.render(createElement(ImageryResourcePanel, {
+      ...propsOf(submitted, { waybackCatalog: harness.owner, useResource: () => ({ status: 'live', value: { ...page, sources }, failure: undefined }) }),
+      open: true,
+    }))
+  })
+  await openEarly(dom.container)
+  assert.equal(dom.window.document.querySelector('[data-map-wayback-release]')?.disabled, true)
+  assert.equal(harness.calls.length, 0, 'a withheld policy never warms the catalog')
+  await selectRelease(dom, '10')
+  assert.equal(requests.length, 0)
 })
 
 test('the recent dialog controls opacity while the eye controls visibility', async tContext => {

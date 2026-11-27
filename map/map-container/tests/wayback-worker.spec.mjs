@@ -572,7 +572,12 @@ test('production transport reloads the official release catalog after a later ca
     async request() {
       reads += 1
       const next = config()
-      if (reads > 1) delete next[10]
+      if (reads > 1) {
+        next[20] = {
+          ...next[10], itemID: '2'.repeat(32), itemTitle: 'World Imagery (Wayback 2015-01-01)',
+          itemURL: next[10].itemURL.replace('/tile/10/', '/tile/20/'), layerIdentifier: 'WB_2015_R01',
+        }
+      }
       return { status: 200, body: Buffer.from(JSON.stringify(next)), contentType: 'application/json', cache: {} }
     },
     dispose() {},
@@ -580,7 +585,7 @@ test('production transport reloads the official release catalog after a later ca
   const transport = new WaybackOfficialTransport(undefined, { network }, workerUrl)
   try {
     assert.equal((await transport.getWaybackItems()).length, 1)
-    assert.equal((await transport.getWaybackItems()).length, 0)
+    assert.equal((await transport.getWaybackItems()).length, 2)
     assert.equal(reads, 2)
   } finally {
     await transport.dispose()

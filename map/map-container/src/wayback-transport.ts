@@ -12,8 +12,7 @@ import { admitSourceImage } from './source-image.ts'
 import type { ResolvedMapSource } from './sources.ts'
 import { waybackDescriptor, type WaybackCore } from './wayback.ts'
 import type { WaybackCoreItem, WaybackCoreMetadata } from './wayback-core.ts'
-
-const CONFIG_URL = 'https://s3-us-west-2.amazonaws.com/config.maptiles.arcgis.com/waybackconfig.json'
+import { decodeWaybackCatalog, WAYBACK_CONFIG_URL, WaybackCatalogDecodeError } from './wayback-catalog-codec.ts'
 const WAYBACK_HOST = /^wayback(?:-a|-b)?\.maptiles\.arcgis\.com$/
 const WAYBACK_PATH = /^\/arcgis\/rest\/services\/World_Imagery\/(?:WMTS\/1\.0\.0\/default028mm\/MapServer\/tile|MapServer\/tilemap)\/(\d+)\/(\d+)\/(\d+)\/(\d+)$/
 const METADATA_PATH = /^\/arcgis\/rest\/services\/World_Imagery_Metadata_\d{4}_r\d{2}\/MapServer\/(?:0|[1-9]\d?)\/query$/
@@ -26,7 +25,7 @@ export interface WaybackTransportDependencies extends SourceNetworkDependencies 
 
 function admit(url: URL): void {
   if (url.protocol !== 'https:' || url.port !== '' || url.username !== '' || url.password !== '' || url.hash !== '') throw new SourceCatalogError('SOURCE_RESOURCE_DENIED')
-  if (url.href === CONFIG_URL) return
+  if (url.href === WAYBACK_CONFIG_URL) return
   if (url.hostname === 'metadata.maptiles.arcgis.com' && METADATA_PATH.test(url.pathname)) {
     const expected = new Set(['f', 'where', 'outfields', 'geometry', 'returngeometry', 'geometrytype', 'spatialrel'])
     const seen = new Set<string>()
@@ -73,35 +72,12 @@ function admit(url: URL): void {
  * @returns the number of release entries the official reader must return.
  */
 function admitCatalog(body: Buffer): number {
-  let parsed: unknown
   try {
-    parsed = JSON.parse(body.toString('utf8'))
+    return decodeWaybackCatalog(body.toString('utf8')).releases.length
   } catch (error) {
-    if (!(error instanceof SyntaxError)) throw error
+    if (!(error instanceof WaybackCatalogDecodeError)) throw error
     throw new SourceCatalogError('SOURCE_UNAVAILABLE')
   }
-  if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) throw new SourceCatalogError('SOURCE_UNAVAILABLE')
-  const catalog = parsed as Record<string, unknown>
-  let releaseCount = 0
-  for (const key of Object.keys(catalog)) {
-    const releaseId = Number(key)
-    if (Number.isNaN(releaseId)) continue
-    releaseCount += 1
-    // The official reader resolves the item by numeric index, so validate the
-    // entry it will actually read.
-    const value = catalog[String(releaseId)]
-    if (typeof value !== 'object' || value === null || Array.isArray(value)) throw new SourceCatalogError('SOURCE_UNAVAILABLE')
-    const item = value as Record<string, unknown>
-    for (const field of ['itemTitle', 'itemID', 'itemURL', 'metadataLayerUrl', 'metadataLayerItemID', 'layerIdentifier']) {
-      if (typeof item[field] !== 'string') throw new SourceCatalogError('SOURCE_UNAVAILABLE')
-    }
-    const title = /^World Imagery \(Wayback (\d{4}-\d{2}-\d{2})\)$/.exec(item.itemTitle as string)
-    const label = title?.[1]
-    if (label === undefined) throw new SourceCatalogError('SOURCE_UNAVAILABLE')
-    const date = new Date(`${label}T00:00:00Z`)
-    if (!Number.isFinite(date.getTime()) || date.toISOString().slice(0, 10) !== label) throw new SourceCatalogError('SOURCE_UNAVAILABLE')
-  }
-  return releaseCount
 }
 
 /** Reject malformed tilemap evidence before the official reader can treat it as no change. */
@@ -222,7 +198,7 @@ export class WaybackOfficialTransport implements WaybackCore {
             if (response.status !== 200) throw new SourceCatalogError('SOURCE_UNAVAILABLE')
             // A partially damaged catalog is filtered, not rejected, by the
             // official reader; refuse it here to keep the last verified list.
-            if (url.href === CONFIG_URL) catalogReleaseCount = admitCatalog(response.body)
+            if (url.href === WAYBACK_CONFIG_URL) catalogReleaseCount = admitCatalog(response.body)
             if (url.pathname.includes('/tilemap/')) admitTilemap(response.body)
             // Comparison candidates are evidence of distinct local imagery.
             // Reject mislabeled or non-image bytes before the worker hashes

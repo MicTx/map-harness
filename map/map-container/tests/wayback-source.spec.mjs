@@ -69,7 +69,11 @@ async function serviceFixture() {
 }
 
 test('real official capabilities admit the exact fixed release matrix', () => {
-  const metadata = parseWaybackCapabilities(officialCapabilities, 43291, 'WB_2026_R10')
+  const metadata = parseWaybackCapabilities(officialCapabilities, 43291, 'WB_2026_R10', '2026-10-29')
+  assert.throws(
+    () => parseWaybackCapabilities(officialCapabilities, 43291, 'WB_2026_R10', '2026-10-28'),
+    { code: 'SOURCE_UNAVAILABLE' },
+  )
   assert.equal(metadata.matrices.length, 24)
   assert.equal(metadata.matrices[23].maxTileRow, 2 ** 23 - 1)
   assert.throws(() => parseWaybackCapabilities(officialCapabilities, 43291, 'WB_1999_R99'), { code: 'SOURCE_UNAVAILABLE' })
@@ -80,6 +84,73 @@ test('real official capabilities admit the exact fixed release matrix', () => {
     '/tile/30584/{TileMatrix}/{TileRow}/{TileCol}', '/tile/15084/{TileMatrix}/{TileRow}/{TileCol}',
   )
   assert.throws(() => parseWaybackCapabilities(Buffer.from(duplicated), 15084, 'WB_2015_R14'), { code: 'SOURCE_UNAVAILABLE' })
+})
+
+test('browser release admission and render do not require a host catalog or a successful sync', async t => {
+  const path = catalogPath(t)
+  let catalogReads = 0
+  const item = releases[1]
+  const hint = { releaseId: item.releaseNum, itemId: item.itemID, layerIdentifier: item.layerIdentifier, publishedAt: item.releaseDateLabel }
+  const official = { id: hint.itemId, owner: 'esri_imagery', orgId: 'P3ePLMYs2RVChkJx', type: 'WMTS', access: 'public', title: item.itemTitle, url: item.itemURL }
+  const requests = []
+  let trusted = true
+  const boot = () => {
+    const history = wayback({ core: { async getWaybackItems() { catalogReads += 1; throw new Error('S3 unavailable') } } })
+    history.startCatalogSync(path, () => {})
+    const catalog = createMapSourceCatalog(undefined, 'allow', {}, history)
+    const service = createMapSourceService(catalog, { network: {
+      async request({ url, payload, source }) {
+        assert.equal(source.allowPrivateNetwork, false)
+        requests.push(url.href)
+        if (url.hostname === 'www.arcgis.com' && payload === 'json') {
+          return { status: 200, body: Buffer.from(JSON.stringify({ ...official, owner: trusted ? official.owner : 'another_publisher' })), contentType: 'application/json', cache: {} }
+        }
+        assert.equal(url.hostname, 'wayback.maptiles.arcgis.com')
+        assert.equal(payload, 'xml')
+        return { status: 200, body: officialCapabilities, contentType: 'application/xml', cache: {} }
+      },
+      dispose() {},
+    } }, history)
+    const view = { basemap: null, imageryDisplay: idleImagery, mode: 'map', view: { center: [0, 0], wkid: 3857, zoom: 15 } }
+    const routes = createMapSourceRoutes(service, async id => id === 'session' ? view : null)
+    return { service, routes, dispose: async () => { routes.dispose(); await service.dispose(); await history.dispose() } }
+  }
+  const request = (candidate, sessionId = 'session') => new Request('http://localhost/api/map/wayback/admit', {
+    method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ sessionId, release: candidate }),
+  })
+  const cold = boot()
+  let descriptor
+  try {
+    assert.equal((await cold.routes.fetch(request(hint, 'different-session'))).status, 404)
+    assert.equal((await cold.routes.fetch(request({ ...hint, url: 'https://invalid.test' }))).status, 403)
+    const oversized = await cold.routes.fetch(request({ ...hint, itemId: 'a'.repeat(2_048) }))
+    assert.equal(oversized.status, 413)
+    assert.deepEqual(await oversized.json(), { ok: false, code: 'SOURCE_LIMIT_EXCEEDED' })
+    assert.deepEqual(requests, [])
+    trusted = false
+    assert.equal((await cold.routes.fetch(request(hint))).status, 409)
+    trusted = true
+    const result = await cold.routes.fetch(request(hint))
+    assert.equal(result.status, 200, JSON.stringify(await result.clone().json()))
+    descriptor = await result.json()
+    assert.equal(descriptor.release.version, '10')
+    assert.equal(descriptor.title, item.itemTitle)
+    assert.equal(requests.some(url => url.includes('waybackconfig.json')), false)
+    assert.equal(catalogReads, 1)
+    await assert.rejects(cold.service.waybackRelease(10), { code: 'SOURCE_UNAVAILABLE' })
+  } finally {
+    await cold.dispose()
+  }
+  const reopened = boot()
+  try {
+    const before = requests.length
+    reopened.service.verifySource(descriptor)
+    const binding = await reopened.service.prepare(descriptor)
+    assert.equal(binding.native.metadata.nativeLayer, hint.layerIdentifier)
+    assert.deepEqual(requests.slice(before).map(url => new URL(url).hostname), ['wayback.maptiles.arcgis.com'])
+  } finally {
+    await reopened.dispose()
+  }
 })
 
 test('an official catalog identifier mismatch still selects only its fixed capability release', async () => {

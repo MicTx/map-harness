@@ -7,7 +7,7 @@ import { createHash, randomUUID } from 'node:crypto'
 import { isDeepStrictEqual } from 'node:util'
 import { brandString } from '@deepseek-ai/dsh-brand'
 import { assertNever, deepFreeze } from '@deepseek-ai/dsh-util-values'
-import { BasemapSourceId, type BasemapSource } from '@map-harness/map-layers'
+import { BasemapSourceId, sourceCompatibleWithView, type BasemapSource } from '@map-harness/map-layers'
 import { admitSourceImage } from './source-image.ts'
 import { SourceCatalogError } from './source-error.ts'
 import { sourceImageEtag, sourceImageScopeKey, nativeSourceFingerprint } from './source-scope.ts'
@@ -36,6 +36,9 @@ import { canonicalMapSource, type ResolvedMapSource, type MapSourceCatalog } fro
 import type { SourceNetworkRequest } from './source-network.ts'
 import { createWaybackService, waybackReleaseOf, WAYBACK_ENDPOINT, WAYBACK_SOURCE_ID, type WaybackCoverage, type WaybackServiceReader, type WaybackViewport } from './wayback.ts'
 import { parseWaybackCapabilities } from './wayback-capabilities.ts'
+import { verifyWaybackRelease, type WaybackReleaseVerificationRequest } from './wayback-release-verification.ts'
+import { viewEngineKey } from './view-policy.ts'
+import type { MapViewRecord } from './registry.ts'
 
 interface QueueOperation {
   readonly task: (signal: AbortSignal) => Promise<unknown>
@@ -387,10 +390,15 @@ export function createMapSourceService(
     const canonical = canonicalMapSource(catalog, input)
     const releaseId = waybackReleaseOf(input)
     if (releaseId === null) throw new SourceCatalogError('SOURCE_RESOURCE_DENIED')
-    await wayback.waitForCatalog(waybackSignal(signal))
+    try {
+      catalog.resolvedWaybackRelease(canonical)
+    } catch (error) {
+      if (!(error instanceof SourceCatalogError) || error.code !== 'SOURCE_UNAVAILABLE') throw error
+      await wayback.waitForCatalog(waybackSignal(signal))
+    }
     ensureActive(signal)
-    const release = wayback.release(releaseId, signal)
     const source = await catalog.verifyWaybackSource(canonical, signal)
+    const release = catalog.resolvedWaybackRelease(source)
     return runOwned(signal, async ownedSignal => {
       ensureActive(ownedSignal)
       const existing = definitions.get(definitionKey(source))
@@ -433,6 +441,34 @@ export function createMapSourceService(
       waybackDefinitionKeys.push(key)
       return binding
     })
+  }
+
+  const admitWaybackRelease = async (
+    hint: WaybackReleaseVerificationRequest,
+    { mode, view }: { readonly mode: 'map' | 'scene'; readonly view: MapViewRecord },
+    signal?: AbortSignal,
+  ): Promise<BasemapSource> => {
+    ensureActive(signal)
+    assertWaybackEnabled()
+    if (!catalog.list({ pageSize: 1 }).canChange) throw new SourceCatalogError('SOURCE_READ_ONLY')
+    const expected = catalog.describeWaybackRelease({ ...hint, title: `World Imagery (Wayback ${hint.publishedAt})`, acquiredAt: null })
+    if (!sourceCompatibleWithView(expected, { mode, wkid: viewEngineKey(view.wkid), zoom: view.zoom })) {
+      throw new SourceCatalogError('SOURCE_COMBINATION_UNSUPPORTED')
+    }
+    try {
+      return await catalog.verifyWaybackSource(expected, signal)
+    } catch (error) {
+      if (!(error instanceof SourceCatalogError) || !['SOURCE_NOT_FOUND', 'SOURCE_UNAVAILABLE'].includes(error.code)) throw error
+    }
+    const remember = wayback.rememberVerifiedRelease
+    if (remember === undefined) throw new SourceCatalogError('SOURCE_UNAVAILABLE')
+    return runOwned(signal, async ownedSignal => {
+      const verified = await verifyWaybackRelease(hint, network, ownedSignal)
+      ensureActive(ownedSignal)
+      const descriptor = catalog.describeWaybackRelease(verified.release)
+      remember(verified.release, descriptor.configDigest)
+      return descriptor
+    }, wayback.requestTimeoutMs)
   }
 
   const waybackResource = async (
@@ -654,6 +690,7 @@ export function createMapSourceService(
       ensureActive(signal)
       return catalog.waybackDescriptor(releaseId, signal)
     },
+    admitWaybackRelease,
     waybackCatalog: async (query: { readonly cursor?: string; readonly pageSize?: number } = {}, signal?: AbortSignal): Promise<unknown> => {
       ensureActive(signal)
       assertWaybackEnabled()

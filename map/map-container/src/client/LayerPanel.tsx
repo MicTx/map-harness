@@ -43,7 +43,10 @@ import type { AnnotationGeometry } from '../protocol.ts'
 import { blendEarlyImagery } from '../imagery-display.ts'
 import { VISUAL_CHANGE_LAYER_ID, VISUAL_PROPOSAL_LAYER_ID } from '../comparison-limits.ts'
 import type { GeoJsonFeatureCollection } from '../registry.ts'
-import { WaybackPanel } from './wayback-panel.tsx'
+import { WaybackPanel, useWaybackCatalog } from './wayback-panel.tsx'
+import type { WaybackCatalogOwner } from './wayback-catalog.ts'
+import { admitWaybackRelease, type WaybackAdmitFailure } from './wayback-client.ts'
+import type { WaybackCatalogRelease } from '../wayback-catalog-codec.ts'
 import { ProposalSource } from './ProposalSource.tsx'
 import { ChangeSource } from './ChangeSource.tsx'
 import { constrainPanel, resizePanel, type PanelRect, type ResizeDirection } from './panel-geometry.ts'
@@ -86,6 +89,8 @@ export interface LayerPanelProps {
   readonly changeSubmit: PanelChangeSubmit | undefined
   readonly panelSubmit: PanelSubmit | undefined
   readonly imageUrl: MapImageUrl | undefined
+  /** Plugin-owned Wayback release catalog; undefined until the map is mounted or when none is registered. */
+  readonly waybackCatalog?: WaybackCatalogOwner | undefined
 }
 
 function rowName(row: PanelRowFace): string {
@@ -120,7 +125,7 @@ function TableHeader({ t }: { readonly t: TranslateNS<'mapContainer'> }): ReactN
  * @param props - see {@link LayerPanelProps}.
  * @returns the panel card, collapsed to its title bar when closed.
  */
-export function LayerPanel({ surface = 'all', open: openProp, onOpenChange, wire, sessionId, occurrenceKey, occurrence, t, useResource, changeSubmit, panelSubmit, imageUrl }: LayerPanelProps): ReactNode {
+export function LayerPanel({ surface = 'all', open: openProp, onOpenChange, wire, sessionId, occurrenceKey, occurrence, t, useResource, changeSubmit, panelSubmit, imageUrl, waybackCatalog }: LayerPanelProps): ReactNode {
   const unifiedSurface = surface === 'unified'
   const [activeTab, setActiveTab] = useState<PanelTab>('ai')
   const aiSurface = surface === 'ai' || surface === 'all' || unifiedSurface
@@ -154,6 +159,15 @@ export function LayerPanel({ surface = 'all', open: openProp, onOpenChange, wire
   const [drawingKind, setDrawingKind] = useState<AnnotationDrawKind | null>(null)
   const [drawingError, setDrawingError] = useState<'geometry-invalid' | 'submit-failed' | null>(null)
   const [imageryDialogFor, setImageryDialogFor] = useState<'labels' | 'recent' | 'early' | null>(null)
+  const [earlyPending, setEarlyPending] = useState<WaybackCatalogRelease | null>(null)
+  const [earlyFailure, setEarlyFailure] = useState<WaybackAdmitFailure | null>(null)
+  const earlyAdmission = useRef<AbortController | null>(null)
+  const panelMounted = useRef(false)
+  const closeEarly = (): void => {
+    earlyAdmission.current?.abort()
+    setImageryDialogFor(null)
+    setEarlyFailure(null)
+  }
   const [annotationMenuOpen, setAnnotationMenuOpen] = useState(false)
   const [bulkMenuOpen, setBulkMenuOpen] = useState(false)
   const listRef = useRef<HTMLDivElement | null>(null)
@@ -180,6 +194,16 @@ export function LayerPanel({ surface = 'all', open: openProp, onOpenChange, wire
   const selectedAnnotation = annotations.find(annotation => annotation.id === annotationDialogFor) ?? null
   const sourceResource = useResource(`dsh-resource://map-source/${encodeURIComponent(sessionId)}`)
   const sourcePage = sourceResource.status === 'live' ? sourceResource.value : undefined
+  const waybackAllowed = sourcePage?.sources.some(source => source.id === 'esri-wayback' && source.availability.kind === 'configured') ?? false
+  const catalogCanWrite = changeSubmit !== undefined && (sourcePage?.canChange ?? false)
+  const wayback = useWaybackCatalog(waybackCatalog, waybackAllowed)
+  useEffect(() => {
+    panelMounted.current = true
+    return () => {
+      panelMounted.current = false
+      earlyAdmission.current?.abort()
+    }
+  }, [])
   const baseSources = useMemo(() => sourcePage?.sources.filter(source => source.role === 'basemap') ?? [], [sourcePage])
   const labelSources = useMemo(() => sourcePage?.sources.filter(source => source.role === 'labels') ?? [], [sourcePage])
   const currentBaseId = wire.basemap?.basemap.id ?? 'esri-world-imagery'
@@ -290,6 +314,47 @@ export function LayerPanel({ surface = 'all', open: openProp, onOpenChange, wire
   /** Submit the imagery display state (tab visibility, opacity, historical source). */
   const writeImageryDisplay = (display: import('../protocol.ts').ImageryDisplayState, summary: string): void => {
     write({ op: 'set-imagery-display', display }, summary)
+  }
+
+  /**
+   * Admit one release, then commit it as one `set-imagery-display` against the
+   * revision and display read at click time. The panel stays busy meanwhile.
+   */
+  const selectEarly = (release: WaybackCatalogRelease): void => {
+    if (!catalogCanWrite || busyRef.current) return
+    const controller = new AbortController()
+    earlyAdmission.current = controller
+    const revision = revisionNow()
+    const display = imageryDisplay
+    const summary = t('panel.imagery.summary.early')
+    busyRef.current = true
+    setBusy(true)
+    setNotice(null)
+    setEarlyFailure(null)
+    setEarlyPending(release)
+    void admitWaybackRelease(sessionId, release, controller.signal)
+      .then(async admitted => {
+        if (controller.signal.aborted || !panelMounted.current) return
+        if (!admitted.ok) {
+          setEarlyFailure(admitted.reason)
+          return
+        }
+        earlyAdmission.current = null
+        const outcome = await changeSubmit({ sessionId, revision, summary, change: { op: 'set-imagery-display', display: blendEarlyImagery({ ...display, earlySource: admitted.source, earlyVisible: true }) } })
+        if (!panelMounted.current) return
+        if (outcome.ok) acknowledgedRevision.current = outcome.revision
+        else flash(false, t('panel.change.failed', { reason: reasonOf(outcome.code) }))
+      })
+      .catch((_submitError: unknown) => {
+        if (!controller.signal.aborted && panelMounted.current) flash(false, t('panel.change.failed', { reason: reasonOf('network') }))
+      })
+      .finally(() => {
+        earlyAdmission.current = null
+        busyRef.current = false
+        if (!panelMounted.current) return
+        setBusy(false)
+        setEarlyPending(null)
+      })
   }
 
   /** Submit one full public selection; an incompatible existing label is cleared in the same base change. */
@@ -998,7 +1063,7 @@ export function LayerPanel({ surface = 'all', open: openProp, onOpenChange, wire
                 />
                 <span data-map-panel-actions="">
                   <Button variant="ghost" size="sm" type="button" data-map-panel-icon="" aria-haspopup="dialog" aria-label={t('panel.more', { name: t('panel.imagery.tab.early') })} title={t('panel.more', { name: t('panel.imagery.tab.early') })}
-                    onClick={() => setImageryDialogFor(previous => previous === 'early' ? null : 'early')}>⋯</Button>
+                    onClick={() => { if (imageryDialogFor === 'early') closeEarly(); else setImageryDialogFor('early') }}>⋯</Button>
                 </span>
                 </span>
               </div>
@@ -1083,17 +1148,16 @@ export function LayerPanel({ surface = 'all', open: openProp, onOpenChange, wire
         </ImageryDialog>
       )}
       {imageryDialogFor === 'early' && (
-        <ImageryDialog title={t('panel.imagery.tab.early')} t={t} onClose={() => setImageryDialogFor(null)}>
+        <ImageryDialog title={t('panel.imagery.tab.early')} t={t} onClose={closeEarly}>
           <WaybackPanel
-            sessionId={sessionId}
-            canWrite={sourceCanWrite}
             current={imageryDisplay.earlySource}
+            catalog={wayback}
+            busy={busy || !catalogCanWrite}
+            pendingReleaseId={earlyPending?.releaseId ?? null}
+            failure={earlyFailure}
             t={t}
-            onSelect={source => writeImageryDisplay(blendEarlyImagery({
-              ...imageryDisplay,
-              earlySource: source,
-              earlyVisible: source === null ? false : true,
-            }), t('panel.imagery.summary.early'))}
+            onSelect={selectEarly}
+            onClear={() => writeImageryDisplay(blendEarlyImagery({ ...imageryDisplay, earlySource: null, earlyVisible: false }), t('panel.imagery.summary.early'))}
           />
         </ImageryDialog>
       )}

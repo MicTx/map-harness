@@ -4,7 +4,7 @@
 
 Map Harness 是自托管的地理任务智能体：在实时地图上绘制、查看并分析。
 
-从 [Releases](https://github.com/MicTx/map-harness-public/releases) 下载脚本启动的 Web 服务包。本仓按下方许可公开发布完整允许清单源码树；release 附件是预编译的 Web 服务归档。
+从 [Releases](https://github.com/MicTx/map-harness/releases) 下载脚本启动的 Web 服务包。本仓按下方许可公开发布完整允许清单源码树；release 附件是预编译的 Web 服务归档。
 
 ## 安装
 
@@ -23,4 +23,4 @@ Map Harness 使用独立的用户数据根（默认 `~/.map-harness`，可用 `M
 
 ## 许可
 
-Map Harness 以 [PolyForm Noncommercial License 1.0.0](https://github.com/MicTx/map-harness-public/blob/main/LICENSE) 发布；商业使用需另行书面授权。旧版本保留随附的许可。内置的 DeepSeek Harness 代码仍可依 MIT License 使用；第三方许可权利和必要的源码要约保留在 [THIRD_PARTY_NOTICES.md](https://github.com/MicTx/map-harness-public/blob/main/THIRD_PARTY_NOTICES.md)。
+Map Harness 以 [PolyForm Noncommercial License 1.0.0](https://github.com/MicTx/map-harness/blob/main/LICENSE) 发布；商业使用需另行书面授权。旧版本保留随附的许可。内置的 DeepSeek Harness 代码仍可依 MIT License 使用；第三方许可权利和必要的源码要约保留在 [THIRD_PARTY_NOTICES.md](https://github.com/MicTx/map-harness/blob/main/THIRD_PARTY_NOTICES.md)。

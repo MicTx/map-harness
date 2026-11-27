@@ -10,6 +10,8 @@ import type { SourceRuntimeEpoch, NativeSourceEpoch, PublicSourcePresetId, Sourc
 import type { WmtsMetadata } from './source-wmts.ts'
 import type { MapSourceCatalog } from './sources.ts'
 import type { WaybackCoverage, WaybackViewport } from './wayback.ts'
+import type { WaybackReleaseVerificationRequest } from './wayback-release-verification.ts'
+import type { MapViewRecord } from './registry.ts'
 
 /** A fixed known key-free endpoint; browser SDK loading does not require Node metadata. */
 export interface PublicSourceRuntimeBinding {
@@ -58,6 +60,14 @@ export interface MapSourceService {
   readonly runtimeEpoch: SourceRuntimeEpoch
   /** Resolve a fixed historical release against the last admitted local catalog. */
   waybackRelease(releaseId: number, signal?: AbortSignal): Promise<BasemapSource>
+  /**
+   * Verify one browser-discovered fixed release without fetching the release catalog.
+   * @param release - validated identity hint, not an authoritative descriptor.
+   * @param view - accepted map mode and view used to check compatibility before persistence.
+   * @param signal - caller cancellation.
+   * @returns the canonical descriptor under current deployment policy.
+   */
+  admitWaybackRelease(release: WaybackReleaseVerificationRequest, view: { readonly mode: 'map' | 'scene'; readonly view: MapViewRecord }, signal?: AbortSignal): Promise<BasemapSource>
   /** Read a bounded local catalog page without starting an upstream request. */
   waybackCatalog(query?: { readonly cursor?: string; readonly pageSize?: number }, signal?: AbortSignal): Promise<unknown>
   /** Read point-scoped local historical releases and acquisition evidence. */

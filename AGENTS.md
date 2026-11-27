@@ -184,7 +184,7 @@ Docs accompany every code change: update affected README and JSDoc contracts tog
 
 - **Imagery authorization:** Owner-approved imagery, labels, and model recipients. Respect model capabilities and separate AOI confirmation; don't re-ask.
 - MCP SDK 2.0.0: import `WebStandardStreamableHTTPServerTransport` from `@modelcontextprotocol/server`; loopback fixtures close transports and await bounded child exit.
-- Environment-only branding excludes organization identities and reversible encodings ([V6/V7](map/docs/engineering.md#已知陷阱)). Public staging excludes private history, all Session recordings and replays, and Dependabot configuration.
+- Environment-only branding excludes organization identities and reversible encodings ([V6/V7](map/docs/engineering.md#已知陷阱)). Public `MicTx/map-harness` staging excludes private history, Session recordings, replays, and Dependabot configuration (rules).
 - Root `package.json` versions DSH; `map/release/version.json` supplies `DSH_CLIENT_VERSION` and publishing `--version`. `win-x64` requires [native Windows x64](map/docs/engineering.md#windows-发布构建), not Docker, Wine, or emulation.
 - `map-container`: Keep `dsh-attachment`/`dsh-llm` type-only (`node:buffer` blanks the tab; runtime `dsh-llm` fails in SEA). Use `brandString<MessageId>()`. Proposals fold without recapture; camera receipts await per-view writes. Observation capture retries `updating`-only changes after two stable frames within its original deadline; other identity changes refuse.
 - Map Web buffers Cordis warnings; read Wayback sync diagnostics from `stderr`.

@@ -38,9 +38,13 @@ import type { MapViewRecord } from './registry.ts'
 import type { ImageryDisplayState } from './protocol.ts'
 import { viewEngineKey } from './view-policy.ts'
 import { waybackReleaseOf } from './wayback.ts'
+import { parseWaybackReleaseVerificationRequest } from './wayback-release-verification.ts'
 
 /** Same-origin read-only Wayback catalog and point evidence route. */
 export const MAP_WAYBACK_ROUTE = '/api/map/wayback'
+
+const WAYBACK_ADMISSION_ROUTE = '/api/map/wayback/admit'
+const MAX_WAYBACK_ADMISSION_BYTES = 1_024
 
 /** The current session facts needed to authorize one source render/resource. */
 export interface SourceSessionState {
@@ -442,6 +446,66 @@ async function serveRender(
   return Response.json(descriptor.value, { headers: responseHeaders() })
 }
 
+async function readWaybackAdmissionBody(request: Request, signal: AbortSignal): Promise<string> {
+  if (request.body === null) denied()
+  const reader = request.body.getReader()
+  const decoder = new TextDecoder('utf-8', { fatal: true })
+  let received = 0
+  let body = ''
+  const stop = (): void => {
+    void reader.cancel().catch((_cancelError: unknown) => { /* The request stream has already failed. */ })
+  }
+  signal.addEventListener('abort', stop, { once: true })
+  try {
+    ensureActive(signal)
+    for (;;) {
+      const { value, done } = await reader.read()
+      ensureActive(signal)
+      if (done) return body + decoder.decode()
+      received += value.byteLength
+      if (received > MAX_WAYBACK_ADMISSION_BYTES) denied('SOURCE_LIMIT_EXCEEDED')
+      body += decoder.decode(value, { stream: true })
+    }
+  } catch (error) {
+    stop()
+    if (error instanceof TypeError) denied()
+    throw error
+  } finally {
+    signal.removeEventListener('abort', stop)
+    reader.releaseLock()
+  }
+}
+
+async function serveWaybackAdmission(
+  request: Request,
+  reader: SourceStateReader,
+  service: MapSourceService,
+  signal: AbortSignal,
+): Promise<Response> {
+  if (new URL(request.url).search !== '' || request.headers.get('sec-fetch-site') === 'cross-site'
+    || request.headers.get('content-type')?.split(';', 1)[0]?.trim() !== 'application/json') denied()
+  const bodyText = await readWaybackAdmissionBody(request, signal)
+  let release: ReturnType<typeof parseWaybackReleaseVerificationRequest>
+  let sessionId: SessionIdType
+  try {
+    const body: unknown = JSON.parse(bodyText)
+    if (typeof body !== 'object' || body === null || Array.isArray(body)) denied()
+    const data = body as Record<string, unknown>
+    if (Object.keys(data).length !== 2 || typeof data.sessionId !== 'string') denied()
+    sessionId = parseSessionId(data.sessionId)
+    release = parseWaybackReleaseVerificationRequest(data.release)
+  } catch (error) {
+    if (error instanceof SyntaxError || error instanceof TypeError || error instanceof SourceCatalogError) denied()
+    throw error
+  }
+  const state = await reader(sessionId, signal)
+  ensureActive(signal)
+  if (state === null) denied('SOURCE_NOT_FOUND')
+  const source = await service.admitWaybackRelease(release, state, signal)
+  ensureActive(signal)
+  return Response.json(source, { headers: responseHeaders() })
+}
+
 async function serveWayback(
   request: Request,
   reader: SourceStateReader,
@@ -662,8 +726,8 @@ interface ConnectionFetchSurface {
   readonly fetch?: {
     register(route: {
       readonly path: string
-      readonly methods: readonly ['GET']
-      readonly requestBody: 'buffered'
+      readonly methods: readonly ['GET'] | readonly ['POST']
+      readonly requestBody: 'buffered' | 'streaming'
       readonly fetch: (request: Request) => Promise<Response>
     }): () => Promise<void>
   }
@@ -752,7 +816,7 @@ async function readProductionSourceState(
 }
 
 /**
- * Register the three production exact Fetch routes when Connection and SessionController are present.
+ * Register the production source routes when Connection and SessionController are present.
  * @param ctx - host context owning optional late-mounted services.
  * @param service - process source service activation.
  * @returns combined async disposer, or undefined when a required service is absent.
@@ -772,10 +836,11 @@ export function registerMapSourceRoutes(
     MAP_SOURCE_RENDER_ROUTE,
     MAP_SOURCE_RESOURCE_ROUTE,
     MAP_WAYBACK_ROUTE,
+    WAYBACK_ADMISSION_ROUTE,
   ].map(path => fetchRegistry.register({
     path,
-    methods: ['GET'],
-    requestBody: 'buffered',
+    methods: path === WAYBACK_ADMISSION_ROUTE ? ['POST'] : ['GET'],
+    requestBody: path === WAYBACK_ADMISSION_ROUTE ? 'streaming' : 'buffered',
     fetch: request => routes.fetch(request),
   }))
   return async () => {
@@ -807,7 +872,7 @@ function promptAbort<Value>(work: Promise<Value>, signal: AbortSignal): Promise<
 }
 
 /**
- * Create the three exact source routes around one shared source-service activation.
+ * Create the exact source routes around one shared source-service activation.
  * @param service - activation-owned native service; the routes never dispose it.
  * @param readState - authority-backed current session snapshot reader.
  * @returns route closure with its own bounded operation retention and lifecycle.
@@ -827,16 +892,17 @@ export function createMapSourceRoutes(
       if (url.pathname !== MAP_SOURCE_CATALOG_ROUTE
         && url.pathname !== MAP_SOURCE_RENDER_ROUTE
         && url.pathname !== MAP_SOURCE_RESOURCE_ROUTE
-        && url.pathname !== MAP_WAYBACK_ROUTE) {
+        && url.pathname !== MAP_WAYBACK_ROUTE && url.pathname !== WAYBACK_ADMISSION_ROUTE) {
         return Response.json({ ok: false, code: 'SOURCE_RESOURCE_DENIED' }, {
           status: 404,
           headers: responseHeaders(),
         })
       }
-      if (request.method !== 'GET') {
+      const method = url.pathname === WAYBACK_ADMISSION_ROUTE ? 'POST' : 'GET'
+      if (request.method !== method) {
         return Response.json({ ok: false, code: 'SOURCE_RESOURCE_DENIED' }, {
           status: 405,
-          headers: responseHeaders([['allow', 'GET']]),
+          headers: responseHeaders([['allow', method]]),
         })
       }
       const conditional = request.headers.get('if-none-match')
@@ -852,7 +918,8 @@ export function createMapSourceRoutes(
       active.add(operation)
       const timer = setTimeout(
         () => operation.controller.abort('deadline'),
-        url.pathname === MAP_WAYBACK_ROUTE ? service.waybackRequestTimeoutMs : service.catalog.networkConfig.requestTimeoutMs,
+        url.pathname === MAP_WAYBACK_ROUTE || url.pathname === WAYBACK_ADMISSION_ROUTE
+          ? service.waybackRequestTimeoutMs : service.catalog.networkConfig.requestTimeoutMs,
       )
       const onCallerAbort = (): void => operation.controller.abort('caller')
       request.signal.addEventListener('abort', onCallerAbort, { once: true })
@@ -860,11 +927,13 @@ export function createMapSourceRoutes(
       const work = (async () => {
         try {
           ensureActive(operation.controller.signal)
-          const handler = url.pathname === MAP_SOURCE_CATALOG_ROUTE ? serveCatalog
-            : url.pathname === MAP_SOURCE_RENDER_ROUTE ? serveRender
-              : url.pathname === MAP_WAYBACK_ROUTE ? serveWayback
-                : serveResource
-          return await handler(request, readState, service, operation.controller.signal)
+          switch (url.pathname) {
+            case MAP_SOURCE_CATALOG_ROUTE: return await serveCatalog(request, readState, service, operation.controller.signal)
+            case MAP_SOURCE_RENDER_ROUTE: return await serveRender(request, readState, service, operation.controller.signal)
+            case MAP_WAYBACK_ROUTE: return await serveWayback(request, readState, service, operation.controller.signal)
+            case WAYBACK_ADMISSION_ROUTE: return await serveWaybackAdmission(request, readState, service, operation.controller.signal)
+            default: return await serveResource(request, readState, service, operation.controller.signal)
+          }
         } finally {
           clearTimeout(timer)
           request.signal.removeEventListener('abort', onCallerAbort)

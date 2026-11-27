@@ -5,6 +5,20 @@ import type { LayerPanelProps } from '../src/client/LayerPanel.tsx'
 import { en } from '../src/client/locales.ts'
 import { MAP_THEME_CSS } from '../src/client/map-theme.ts'
 import type { MapContainerWire } from '../src/client/state.ts'
+import { WAYBACK_CONFIG_URL, WAYBACK_ENDPOINT } from '../src/wayback-catalog-codec.ts'
+import { createWaybackCatalogOwner } from '../src/client/wayback-catalog.ts'
+
+// One official catalog entry; the digest depends on this field order.
+const entry = (release: number, date: string, digit: string) => ({
+  itemTitle: `World Imagery (Wayback ${date})`, releaseDateLabel: date, itemID: digit.repeat(32),
+  itemURL: `${WAYBACK_ENDPOINT}/tile/${release}/{level}/{row}/{col}`,
+  metadataLayerUrl: `https://metadata.maptiles.arcgis.com/arcgis/rest/services/World_Imagery_Metadata_${date.slice(0, 4)}_r01/MapServer`,
+  metadataLayerItemID: digit === 'a' ? 'b'.repeat(32) : 'c'.repeat(32), layerIdentifier: `WB_${date.slice(0, 4)}_R01`,
+})
+const catalogBody = JSON.stringify({
+  10: entry(10, '2014-02-20', 'a'),
+  50: entry(50, '2025-10-29', 'd'),
+})
 
 const style = document.createElement('style')
 style.textContent = MAP_THEME_CSS
@@ -19,49 +33,41 @@ const source = {
 }
 const wayback = { ...source, id: 'esri-wayback', title: 'World Imagery Wayback', adapter: 'wmts' }
 const labels = { ...source, id: 'amap-imagery-labels', title: 'AMap Imagery Labels', role: 'labels', compatibleBasemapIds: ['esri-world-imagery', 'esri-wayback'] }
-const older = {
-  releaseId: 10, title: 'World Imagery (Wayback 2014-02-20)', publishedAt: '2014-02-20', acquiredAt: null,
-  descriptor: { ...wayback, title: 'World Imagery (Wayback 2014-02-20)', release: { version: '10', publishedAt: '2014-02-20', acquiredAt: null } },
-}
-const recent = {
-  releaseId: 50, title: 'World Imagery (Wayback 2025-10-29)', publishedAt: '2025-10-29', acquiredAt: null,
-  descriptor: { ...wayback, title: 'World Imagery (Wayback 2025-10-29)', release: { version: '50', publishedAt: '2025-10-29', acquiredAt: null } },
-}
-const localEntry = (entry: typeof older, acquiredAt: string | null) => ({
-  releaseId: entry.releaseId, title: entry.title, publishedAt: entry.publishedAt, acquiredAt,
-  provider: null, resolution: null, accuracy: null, metadataStatus: acquiredAt === null ? 'unknown' : 'known',
+const admitted = (releaseId: number, title: string, publishedAt: string) => ({
+  ...wayback, title, configDigest: `${releaseId}`.repeat(2).padStart(64, '0'),
+  release: { version: String(releaseId), publishedAt, acquiredAt: null },
 })
 
-const originalFetch = globalThis.fetch
-let localMode = 'multiple'
-let failCatalog = false
+const values = new Map<string, string>()
+const browserStorage = {
+  namespace: 'wayback-fixture', getItem: (key: string) => values.get(key) ?? null, setItem: (key: string, value: string) => { values.set(key, value) },
+  removeItem: (key: string) => { values.delete(key) }, keys: () => [...values.keys()], subscribe: () => () => {},
+}
+
 const changes: unknown[] = []
+const submitted: { revision: number }[] = []
 const requests: string[] = []
+const admits: { method?: string; credentials?: RequestCredentials; body: unknown }[] = []
+const state = { failCatalog: false, failAdmission: false }
+
+// Only the official catalog and the admission route may be requested; everything
+// else is recorded so a polled same-origin read fails the assertions.
 globalThis.fetch = async (input, init) => {
-  const url = new URL(typeof input === 'string' ? input : input instanceof URL ? input.href : input.url, location.href)
-  if (url.pathname !== '/api/map/wayback') return originalFetch(input, init)
-  const operation = url.searchParams.get('operation')
-  requests.push(operation ?? '')
-  if (operation === 'catalog') {
-    if (failCatalog) return Response.json({ ok: false }, { status: 502 })
-    return Response.json({ schemaVersion: 1, releases: [recent, older], nextCursor: null })
+  const raw = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url
+  if (raw === WAYBACK_CONFIG_URL) {
+    return state.failCatalog ? new Response('unavailable', { status: 503 }) : new Response(catalogBody, { status: 200 })
   }
-  if (operation === 'local') {
-    const point = { lon: Number(url.searchParams.get('lon')), lat: Number(url.searchParams.get('lat')) }
-    return Response.json({ schemaVersion: 1, point, zoom: Number(url.searchParams.get('zoom')), coverage: 'sampled',
-      releases: localMode === 'single' ? [localEntry(older, null)] : [localEntry(older, '2010-01-02'), localEntry(recent, '2025-01-02')] })
-  }
-  if (operation === 'coverage') {
-    const center = [Number(url.searchParams.get('lon')), Number(url.searchParams.get('lat'))]
-    const extent = ['minX', 'minY', 'maxX', 'maxY'].map(key => Number(url.searchParams.get(key)))
-    const points = [center, [extent[0], extent[1]], [extent[0], extent[3]], [extent[2], extent[1]], [extent[2], extent[3]]]
-    return Response.json({ releaseId: Number(url.searchParams.get('releaseId')), zoom: Math.round(Number(url.searchParams.get('zoom'))),
-      viewport: { extent, wkid: Number(url.searchParams.get('wkid')) }, coverage: 'partial',
-      samples: points.map(([lon, lat], index) => ({ point: { lon, lat }, status: 'known',
-        acquiredAt: index === 1 ? '2012-01-01' : '2010-01-02', provider: null, resolution: null, accuracy: null })) })
+  const url = new URL(raw, location.href)
+  requests.push(url.pathname + url.search)
+  if (url.pathname === '/api/map/wayback/admit') {
+    const body = JSON.parse(String(init?.body)) as { sessionId: string; release: { releaseId: number; publishedAt: string } }
+    admits.push({ method: init?.method, credentials: init?.credentials, body })
+    if (state.failAdmission) return Response.json({ ok: false, code: 'SOURCE_CHANGED' }, { status: 409 })
+    return Response.json(admitted(body.release.releaseId, `World Imagery (Wayback ${body.release.publishedAt})`, body.release.publishedAt))
   }
   return Response.json({ ok: false }, { status: 400 })
 }
+const waybackCatalog = createWaybackCatalogOwner({ storage: browserStorage, ttlMs: 60_000, timeoutMs: 5_000, maxBodyBytes: 1 << 20 })
 
 const translate = (key: keyof typeof en, params: Record<string, string> = {}) =>
   (en[key] ?? key).replace(/\{(\w+)\}/g, (_match, name: string) => params[name] ?? '')
@@ -87,6 +93,7 @@ function Harness() {
     useResource: () => ({ status: 'live' as const, value: { sources: [source, wayback, labels], canChange: true } }),
     changeSubmit: async (input: { revision: number; change: { op: string; display?: MapContainerWire['imageryDisplay'] } }) => {
       changes.push(input.change)
+      submitted.push({ revision: input.revision })
       const revision = input.revision + 1
       if (input.change.op === 'set-basemap') setWire(previous => ({ ...previous, revision, basemap: (input.change as { selection: MapContainerWire['basemap'] }).selection }))
       if (input.change.op === 'set-imagery-display' && input.change.display !== undefined) setWire(previous => ({ ...previous, revision, imageryDisplay: input.change.display! }))
@@ -94,6 +101,7 @@ function Harness() {
       return { ok: true as const, revision }
     },
     panelSubmit: undefined,
+    waybackCatalog,
     liveViewport: { center: [1, 1], extent: [0, 0, 2, 2], wkid: 4326, zoom: 12, mode: 'map' },
   }
   return <div data-map-container=""><div data-map-overlay-content="">
@@ -105,8 +113,12 @@ Object.assign(globalThis, {
   waybackFixture: {
     changes,
     requests,
-    setCatalogFailure(value: boolean) { failCatalog = value },
-    setLocalMode(value: string) { localMode = value },
+    admits,
+    submitted,
+    refresh: async () => { await waybackCatalog.refresh() },
+    snapshot: () => ({ reason: waybackCatalog.getSnapshot().reason }),
+    setAdmissionFailure(value: boolean) { state.failAdmission = value },
+    setCatalogFailure(value: boolean) { state.failCatalog = value },
   },
 })
 createRoot(document.getElementById('root')!).render(<Harness />)

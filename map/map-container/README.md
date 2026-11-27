@@ -13,7 +13,7 @@ change route.
 
 Continuous `map_use` control lives in `mapContainer.interaction`. Per-turn `interaction.maxActions`, `maxObservations` and `maxElapsedMs` are optional and unlimited by default. Recoverable failures leave the turn open; user takeover and accepted `finish` stop it. `/api/map/use` pairs bounded claim/result/cancel messages with the session; replay restores state without repeating SDK actions. See [continuous map use](../docs/map-container-binding.md#连续地图操作map_use).
 
-When Wayback is enabled, the Harness host loads its last validated release catalog from `$DSH_HOME/cache/map/wayback-catalog.sqlite`, then refreshes it at startup and after each `wayback.cacheTtlMs` interval. Only complete, validated batches replace the catalog. Failure is logged without delaying map startup or discarding a usable catalog. `GET /api/map/wayback?operation=catalog` and early-release selection use only that local snapshot. During the first sync, an empty catalog responds with `503` and `Retry-After`; after failure it reports unavailability without scheduling an upstream fetch. The Session retains the exact selected release. Rendering prepares its WMTS capabilities when needed and loads tiles by viewport, with no prefetch or latest-release fallback.
+For model/MCP and legacy catalog reads, the host loads its last validated Wayback catalog from `$DSH_HOME/cache/map/wayback-catalog.sqlite` and refreshes it at startup and after each `wayback.cacheTtlMs` interval. Only a complete batch replaces it; a failure is logged and leaves the last usable catalog intact. `GET /api/map/wayback?operation=catalog` reads only that snapshot and does not trigger a fetch. The browser picker does not use that route. `POST /api/map/wayback/admit` verifies one selected release against a known catalog entry or official ArcGIS item and WMTS evidence, and retains independently verified identities separately from the catalog. Session writes still check deployment policy and the expected revision. Rendering loads fixed-version WMTS tiles by viewport, with no latest-release fallback.
 
 Point queries still use the bounded official service. Local candidates collapse identical decoded 256×256 image pixels, keeping the earliest image and the newest release of each other distinct image; this detects exact decoded equality, not perceptual similarity. Malformed tilemap evidence fails rather than reporting no change. Acquisition dates come from point metadata, not release dates; center and four-corner samples describe only those points. Missing, unknown, or failed metadata remains distinct. `Config.wayback` also sets local-cache entries, request concurrency, and request timeout.
 
@@ -142,15 +142,7 @@ The map's stop control remains visible at 390px and follows both themes. Pointer
   disabled until a release is chosen) and whose name carries the current source
   and opacity summary. "More" opens the same operation dialog as a layer row:
   the labels row holds the compatible label select, the recent row holds the
-  base select and the opacity slider, and the early row lists the paginated
-  locally saved Wayback releases and submits one fixed `set-imagery-display`
-  selection. The dialog reads the local catalog on open and retry, without
-  fetching point evidence or triggering an official refresh. All three honor the catalog
-  loading/error/write-lock states, submit `set-basemap` or `set-imagery-display`
-  changes, and clear an incompatible label automatically instead of falling
-  back silently. Selecting or reopening early imagery changes the recent layer
-  from 100% to 50% opacity when it is visible; hidden or already adjusted
-  recent imagery stays unchanged. The same reversible write holds both changes.
+  base select and the opacity slider, and the early row lists the browser's Wayback catalog and submits one fixed `set-imagery-display` selection. When Wayback is enabled, the browser fetches the public catalog directly in the background without credentials, keeps the last validated list across reloads, and offers retry in the picker if no list is available. Loading the catalog never changes the selection or queries local evidence. All three dialogs honor deployment write locks and clear an incompatible label instead of falling back silently. Selecting or reopening early imagery changes visible recent imagery from 100% to 50% opacity in the same reversible write; hidden or already adjusted recent imagery stays unchanged.
 - The annotation group creates point, polyline, polygon, and rectangle
   features with `SketchViewModel`; finished geometry is projected to WGS84 and
   validated before one accepted revision. Drafts live only in the occurrence's

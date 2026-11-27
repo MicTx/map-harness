@@ -1,10 +1,27 @@
 /**
- * Strictly decoded same-origin Wayback catalog and point evidence reads.
+ * Strictly decoded same-origin Wayback release admission and point evidence reads.
  * @module @map-harness/map-container/client/wayback-client
  */
 import { isValidSourceDate, parseBasemapSource, type BasemapSource } from '@map-harness/map-layers'
-import { WaybackCatalogPreparingError } from '../source-error.ts'
+import type { WaybackCatalogRelease } from '../wayback-catalog-codec.ts'
 import type { WaybackCoverage, WaybackSample, WaybackViewport } from '../wayback.ts'
+
+/** Same-origin credentialed route that verifies one browser-selected release. */
+export const MAP_WAYBACK_ADMIT_ROUTE = '/api/map/wayback/admit'
+
+/** Why an admission did not produce a canonical source; fixed values only, never upstream text. */
+export type WaybackAdmitFailure =
+  | 'denied' /** Deployment policy or Session permission withholds this selection. */
+  | 'changed' /** The release is absent from the admitted catalog or its identity changed. */
+  | 'unavailable' /** The host could not verify the release now. */
+  | 'invalid' /** The response is not the canonical descriptor of the requested release. */
+  | 'network' /** The request itself failed. */
+  | 'cancelled' /** The caller cancelled its own wait. */
+
+/** Settled admission; it never rejects. */
+export type WaybackAdmitResult =
+  | { readonly ok: true; readonly source: BasemapSource }
+  | { readonly ok: false; readonly reason: WaybackAdmitFailure }
 
 /** A published release with its independently observed acquisition date. */
 export interface WaybackRelease {
@@ -62,49 +79,47 @@ function release(value: unknown): WaybackRelease {
 async function read(sessionId: string, parameters: URLSearchParams, signal: AbortSignal): Promise<unknown> {
   parameters.set('sessionId', sessionId)
   const response = await fetch(`/api/map/wayback?${parameters.toString()}`, { signal, headers: { accept: 'application/json' } })
-  if (!response.ok) {
-    if (parameters.get('operation') === 'catalog' && response.status === 503
-      && response.headers.get('retry-after') === String(WaybackCatalogPreparingError.retryAfterSeconds)) {
-      throw new WaybackCatalogPreparingError()
-    }
-    throw new Error(`Wayback request failed with HTTP ${response.status}`)
-  }
+  if (!response.ok) throw new Error(`Wayback request failed with HTTP ${response.status}`)
   return response.json()
 }
 
-/** Read the complete bounded local catalog, continuing through each page in order. */
-export async function readWaybackReleases(sessionId: string, signal: AbortSignal): Promise<readonly { release: WaybackRelease; descriptor: BasemapSource }[]> {
-  const result: { release: WaybackRelease; descriptor: BasemapSource }[] = []
-  const cursors = new Set<string>()
-  let cursor: string | null = null
-  do {
-    const parameters = new URLSearchParams({ operation: 'catalog', pageSize: '50' })
-    if (cursor !== null) parameters.set('cursor', cursor)
-    const payload = object(await read(sessionId, parameters, signal))
-    if (!Array.isArray(payload.releases) || payload.releases.length > 50
-      || payload.schemaVersion !== 1 || !(payload.nextCursor === null || typeof payload.nextCursor === 'string')) throw new Error('invalid Wayback catalog')
-    const seenIds = new Set(result.map(item => item.release.releaseId))
-    for (const item of payload.releases) {
-      const record = object(item)
-      const parsed = parseBasemapSource(record.descriptor)
-      const entry = release(item)
-      if (!parsed.ok || parsed.value.id !== 'esri-wayback' || parsed.value.release.version !== String(entry.releaseId)
-        || parsed.value.title !== entry.title || parsed.value.release.publishedAt !== entry.publishedAt
-        || parsed.value.release.acquiredAt !== null || seenIds.has(entry.releaseId)) {
-        throw new Error('invalid Wayback source')
-      }
-      seenIds.add(entry.releaseId)
-      result.push({ release: entry, descriptor: parsed.value })
-    }
-    if (result.length > 256) throw new Error('Wayback catalog exceeds limit')
-    cursor = payload.nextCursor
-    if (cursor !== null) {
-      if (cursors.has(cursor)) throw new Error('invalid Wayback continuation')
-      cursors.add(cursor)
-    }
-  } while (cursor !== null)
-  if (result.length === 0) throw new Error('empty Wayback catalog')
-  return result
+const ADMIT_FAILURES: Readonly<Record<string, WaybackAdmitFailure>> = Object.freeze({
+  SOURCE_RESOURCE_DENIED: 'denied', SOURCE_READ_ONLY: 'denied', SOURCE_POLICY_DENIED: 'denied',
+  SOURCE_CHANGED: 'changed', SOURCE_NOT_FOUND: 'changed',
+  SOURCE_UNAVAILABLE: 'unavailable', SOURCE_NOT_CONFIGURED: 'unavailable', SOURCE_CREDENTIAL_REJECTED: 'unavailable',
+  SOURCE_TIMEOUT: 'unavailable', SOURCE_LIMIT_EXCEEDED: 'unavailable',
+})
+
+/**
+ * Verify one browser-discovered release identity through the Session's credentialed route.
+ * The descriptor is a host decision: only the identity sent is trusted from the browser.
+ * @param sessionId - owning Session identity.
+ * @param release - identity from the catalog owner's verified snapshot.
+ * @param signal - caller cancellation.
+ * @returns the canonical source, or a fixed failure reason; never rejects.
+ */
+export async function admitWaybackRelease(sessionId: string, release: WaybackCatalogRelease, signal: AbortSignal): Promise<WaybackAdmitResult> {
+  const identity = { releaseId: release.releaseId, itemId: release.itemId, publishedAt: release.publishedAt, layerIdentifier: release.layerIdentifier }
+  let response: Response
+  try {
+    response = await fetch(MAP_WAYBACK_ADMIT_ROUTE, {
+      method: 'POST', credentials: 'same-origin', cache: 'no-store', redirect: 'error', signal,
+      headers: { 'content-type': 'application/json', accept: 'application/json' },
+      body: JSON.stringify({ sessionId, release: identity }),
+    })
+  } catch {
+    return { ok: false, reason: signal.aborted ? 'cancelled' : 'network' }
+  }
+  if (!response.ok) {
+    const payload = await response.json().catch(() => null) as { ok?: unknown; code?: unknown } | null
+    return { ok: false, reason: payload?.ok === false && typeof payload.code === 'string' ? ADMIT_FAILURES[payload.code] ?? 'unavailable' : 'unavailable' }
+  }
+  const parsed = parseBasemapSource(await response.json().catch(() => null))
+  if (!parsed.ok || parsed.value.id !== 'esri-wayback' || parsed.value.release.version !== String(identity.releaseId)
+    || parsed.value.release.publishedAt !== identity.publishedAt || parsed.value.title !== `World Imagery (Wayback ${identity.publishedAt})`) {
+    return { ok: false, reason: 'invalid' }
+  }
+  return { ok: true, source: parsed.value }
 }
 
 /** Read local releases and their independent metadata for a point and zoom. */

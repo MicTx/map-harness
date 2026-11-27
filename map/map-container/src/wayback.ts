@@ -7,16 +7,16 @@ import { createHash } from 'node:crypto'
 import { isDeepStrictEqual } from 'node:util'
 import { BasemapSourceId, ESRI_WORLD_IMAGERY_ATTRIBUTION, type BasemapSource } from '@map-harness/map-layers'
 import { SourceCatalogError, WaybackCatalogPreparingError } from './source-error.ts'
-import { loadWaybackCatalog, saveWaybackCatalog } from './wayback-catalog-store.ts'
+import { loadVerifiedWaybackRelease, loadWaybackCatalog, saveVerifiedWaybackRelease, saveWaybackCatalog } from './wayback-catalog-store.ts'
 import type { WaybackCoreItem, WaybackCoreMetadata, WaybackCoreMetadataIdentity } from './wayback-core.ts'
 import { WAYBACK_SOURCE_ID } from './wayback-id.ts'
+import { normalizeWaybackCatalogItem, WaybackCatalogDecodeError } from './wayback-catalog-codec.ts'
 
 /** Stable source id for every fixed historical release. */
 export { WAYBACK_SOURCE_ID } from './wayback-id.ts'
 /** Fixed official WMTS grid. */
 export const WAYBACK_MATRIX_SET = 'default028mm'
-/** Official WMTS endpoint used for tile requests and capabilities. */
-export const WAYBACK_ENDPOINT = 'https://wayback.maptiles.arcgis.com/arcgis/rest/services/World_Imagery/WMTS/1.0.0/default028mm/MapServer'
+export { WAYBACK_ENDPOINT } from './wayback-catalog-codec.ts'
 
 /** One official fixed release; acquiredAt is never inferred from publishedAt. */
 export interface WaybackRelease {
@@ -127,13 +127,6 @@ function releaseNumber(value: unknown): number {
   return number
 }
 
-function validDate(value: unknown): string {
-  if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value)) throw new SourceCatalogError('SOURCE_UNAVAILABLE')
-  const date = new Date(`${value}T00:00:00Z`)
-  if (!Number.isFinite(date.getTime()) || date.toISOString().slice(0, 10) !== value) throw new SourceCatalogError('SOURCE_UNAVAILABLE')
-  return value
-}
-
 function optionalDate(value: unknown): string | null {
   if (value === null || value === undefined || value === '' || value === 0) return null
   if (typeof value === 'string') {
@@ -160,26 +153,18 @@ type CatalogItem = Omit<WaybackCoreItem, 'releaseDatetime'>
 
 function normalizeItem(value: unknown): { release: WaybackRelease; item: CatalogItem } {
   if (typeof value !== 'object' || value === null || Array.isArray(value)) throw new SourceCatalogError('SOURCE_UNAVAILABLE')
-  const item = value as Partial<CatalogItem>
+  const { releaseDatetime: _releaseDatetime, ...item } = value as Partial<WaybackCoreItem>
   if (typeof item.releaseNum !== 'number') throw new SourceCatalogError('SOURCE_UNAVAILABLE')
-  const releaseId = releaseNumber(item.releaseNum)
-  if (text(item.itemID) === null || text(item.itemTitle) === null || text(item.layerIdentifier) === null
-    || !/^[0-9a-f]{32}$/.test(item.itemID!) || !/^WB_\d{4}_R\d{2}$/.test(item.layerIdentifier!)) throw new SourceCatalogError('SOURCE_UNAVAILABLE')
-  const publishedAt = validDate(item.releaseDateLabel)
-  if (item.itemTitle !== `World Imagery (Wayback ${publishedAt})`) throw new SourceCatalogError('SOURCE_UNAVAILABLE')
-  if (item.itemURL !== `${WAYBACK_ENDPOINT}/tile/${releaseId}/{level}/{row}/{col}`) throw new SourceCatalogError('SOURCE_RESOURCE_DENIED')
-  if (typeof item.metadataLayerUrl !== 'string'
-    || !/^https:\/\/metadata\.maptiles\.arcgis\.com\/arcgis\/rest\/services\/World_Imagery_Metadata_\d{4}_r\d{2}\/MapServer$/.test(item.metadataLayerUrl)
-    || typeof item.metadataLayerItemID !== 'string' || !/^[0-9a-f]{32}$/.test(item.metadataLayerItemID)) throw new SourceCatalogError('SOURCE_RESOURCE_DENIED')
-  return {
-    release: Object.freeze({
-      releaseId, itemId: item.itemID!, title: item.itemTitle, publishedAt, layerIdentifier: item.layerIdentifier!, acquiredAt: null,
-    }),
-    item: {
-      releaseNum: releaseId, itemID: item.itemID!, itemTitle: item.itemTitle, releaseDateLabel: publishedAt,
-      layerIdentifier: item.layerIdentifier!, itemURL: item.itemURL,
-      metadataLayerUrl: item.metadataLayerUrl, metadataLayerItemID: item.metadataLayerItemID,
-    },
+  releaseNumber(item.releaseNum)
+  if (typeof item.releaseDateLabel !== 'string' || item.itemTitle !== `World Imagery (Wayback ${item.releaseDateLabel})`) {
+    throw new SourceCatalogError('SOURCE_UNAVAILABLE')
+  }
+  try {
+    const result = normalizeWaybackCatalogItem(item)
+    return { release: Object.freeze(result.release), item: result.item }
+  } catch (error) {
+    if (!(error instanceof WaybackCatalogDecodeError)) throw error
+    throw new SourceCatalogError(error.reason === 'endpoint' ? 'SOURCE_RESOURCE_DENIED' : 'SOURCE_UNAVAILABLE')
   }
 }
 
@@ -246,6 +231,10 @@ export interface WaybackService {
   readonly requestTimeoutMs: number
   /** Return the release from the last successful catalog snapshot; never start network I/O. */
   cachedRelease(releaseId: number): WaybackRelease | undefined
+  /** Read one independently validated release by exact descriptor identity, without network I/O. */
+  verifiedRelease?(releaseId: number, configDigest: string): WaybackRelease | undefined
+  /** Persist a release after independent official verification; never changes the catalog. */
+  rememberVerifiedRelease?(release: WaybackRelease, configDigest: string): void
   /** Read the last admitted catalog immediately, including after a refresh failure. */
   listReleases(signal?: AbortSignal): readonly WaybackRelease[]
   /** Resolve a fixed release from the local catalog only. */
@@ -605,6 +594,28 @@ export function createWaybackService(config: WaybackConfig = {}): WaybackService
     },
     listReleases,
     release,
+    verifiedRelease(releaseId, configDigest) {
+      ensureActive()
+      if (catalogSync === undefined) return undefined
+      try {
+        return loadVerifiedWaybackRelease(catalogSync.path, releaseId, configDigest)
+      } catch (error) {
+        catalogSync.report('load', error)
+        if (error instanceof SourceCatalogError) throw error
+        throw new SourceCatalogError('SOURCE_UNAVAILABLE')
+      }
+    },
+    rememberVerifiedRelease(release, configDigest) {
+      ensureActive()
+      if (catalogSync === undefined) throw new SourceCatalogError('SOURCE_UNAVAILABLE')
+      try {
+        saveVerifiedWaybackRelease(catalogSync.path, release, configDigest)
+      } catch (error) {
+        catalogSync.report('save', error)
+        if (error instanceof SourceCatalogError) throw error
+        throw new SourceCatalogError('SOURCE_UNAVAILABLE')
+      }
+    },
     waitForCatalog,
     startCatalogSync,
     refreshCatalog,
